@@ -7,7 +7,7 @@
 
 .. image:: https://readthedocs.org/projects/nifigator/badge/?version=latest
     :alt: ReadTheDocs
-    :target: https://nifigator.readthedocs.io/en/stable/
+    :target: https://nifigator.readthedocs.io/en/latest/
 
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg
         :target: https://opensource.org/licenses/MIT
