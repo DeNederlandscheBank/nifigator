@@ -1,0 +1,60 @@
+.. These are examples of badges you might want to add to your README:
+   please update the URLs accordingly
+
+.. image:: https://img.shields.io/pypi/v/nifigator.svg
+    :alt: PyPI-Server
+    :target: https://pypi.org/project/nifigator/
+
+.. image:: https://readthedocs.org/projects/nifigator/badge/?version=latest
+    :alt: ReadTheDocs
+    :target: https://nifigator.readthedocs.io/en/stable/
+
+.. image:: https://img.shields.io/badge/License-MIT-yellow.svg
+        :target: https://opensource.org/licenses/MIT
+        :alt: License: MIT
+
+.. image:: https://img.shields.io/coveralls/github/DeNederlandscheBank/nifigator/main.svg
+    :alt: Coveralls
+    :target: https://coveralls.io/r/DeNederlandscheBank/nifigator
+    
+.. image:: https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold
+    :alt: Project generated with PyScaffold
+    :target: https://pyscaffold.org/
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+        :target: https://github.com/psf/black
+        :alt: Code style: black
+
+=========
+Nifigator
+=========
+
+Nifigator is a pure Python package for working with NLP in RDF. It uses the `NLP Interchange Format (NIF) <https://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/nif-core.html>`_ and is build on top of `RDFLib <https://github.com/RDFLib/rdflib>`_. Here is what is does:
+
+* Convert data from text documents to NIF data
+
+  - Currently supported formats: txt, PDF (text, page and paragraph offsets)
+
+* Add linguistic annotations from NLP processors
+
+  - Currently supported processors: `Stanza <https://stanfordnlp.github.io/stanza/>`_
+
+* RDFLib is used to serialize and deserialize NIF data.
+
+See the `documentation <https://nifigator.readthedocs.io>`_ built from the code.
+
+
+Installation
+------------
+
+To install Nifigator, run this command in your terminal:
+
+.. code-block:: console
+
+    $ pip install nifigator
+
+To install the package from Github
+
+.. code-block:: console
+
+    $ pip install -e git+https://github.com/denederlandschebank/nifigator.git
