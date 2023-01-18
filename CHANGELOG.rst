@@ -18,4 +18,4 @@ Version 0.1.2 (2023-1-18)
 =========================
 
 * Updated several links
-* Added pytest cases with code coverage
+* Added pytest test cases with code coverage
