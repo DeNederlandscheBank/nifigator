@@ -7,7 +7,7 @@ from typing import Union
 import iribaker
 from rdflib import Graph
 from rdflib.namespace import DC, DCTERMS, RDF, XSD
-from rdflib.term import IdentifiedNode, Literal, URIRef
+from rdflib.term import Literal, URIRef
 
 from .const import (
     ITSRDF,
@@ -29,14 +29,6 @@ class NifContext:
 
 
 class NifSentence:
-    pass
-
-
-class NifParagraph:
-    pass
-
-
-class NifPage:
     pass
 
 
@@ -74,7 +66,8 @@ class NifBase(object):
 
     def set_uri(self, uri: Union[URIRef, str] = None):
         """
-        Sets the uri of the object. If the uri is a string then it is converted to an iri.
+        Sets the uri of the object.
+        If the uri is a string then it is converted to an iri.
         """
         if isinstance(uri, str):
             self._uri = URIRef(iribaker.to_iri(uri))
@@ -239,8 +232,9 @@ class NifString(NifBase):
 
     def set_beginIndex(self, beginIndex: Union[Literal, int] = None):
         """
-        Sets the start of the index of the string. The type of beginIndex can be a `Literal` or
-        an `int`. If the type is an `int` then it is converted to a Literal.
+        Sets the start of the index of the string.
+        The type of beginIndex can be a `Literal` or an `int`.
+        If the type is an `int` then it is converted to a Literal.
         """
         if isinstance(beginIndex, int):
             self._beginIndex = Literal(beginIndex, datatype=XSD.nonNegativeInteger)
@@ -249,8 +243,9 @@ class NifString(NifBase):
 
     def set_endIndex(self, endIndex: Union[Literal, int] = None):
         """
-        Sets the end of the index of the string. The type of endIndex can be a `Literal` or
-        an `int`. If the type is an `int` then it is converted to a Literal.
+        Sets the end of the index of the string.
+        The type of endIndex can be a `Literal` or an `int`.
+        If the type is an `int` then it is converted to a Literal.
         """
         if isinstance(endIndex, int):
             self._endIndex = Literal(endIndex, datatype=XSD.nonNegativeInteger)
@@ -259,7 +254,9 @@ class NifString(NifBase):
 
     def set_referenceContext(self, referenceContext: NifContext = None):
         """
-        Sets the referenceContext of the object. The anchorOf is set to the referenceContext string with the beginIndex and endIndex
+        Sets the referenceContext of the object.
+        The anchorOf is set to the referenceContext string
+        with the beginIndex and endIndex.
         """
         if referenceContext is not None:
             if referenceContext.isString is not None:
@@ -269,7 +266,9 @@ class NifString(NifBase):
 
     def set_anchorOf(self, anchorOf: str = None):
         """
-        Sets the anchorOf of the object. The anchorOf should be consistent with the string in the referenceContext.
+        Sets the anchorOf of the object.
+        The anchorOf should be consistent with the string in
+        the referenceContext.
         """
         if isinstance(anchorOf, str):
             self._anchorOf = Literal(anchorOf, datatype=XSD.string)
@@ -1169,9 +1168,11 @@ class NifSentence(NifStructure):
                 s += f"  nextSentence : {repr(self.nextSentence.anchorOf)}\n"
         if self.previousSentence is not None:
             if len(self.previousSentence.anchorOf) > 100:
-                s += f"  previousSentence : {repr(self.previousSentence.anchorOf[0:100])}... \n"
+                ps = repr(self.previousSentence.anchorOf[0:100])
+                s += f"  previousSentence : {ps}... \n"
             else:
-                s += f"  previousSentence : {repr(self.previousSentence.anchorOf)}\n"
+                ps = repr(self.previousSentence.anchorOf)
+                s += f"  previousSentence : {ps}\n"
         if self.firstWord is not None:
             s += f'  firstWord : "{self.firstWord.anchorOf}"\n'
         if self.lastWord is not None:
@@ -1574,11 +1575,14 @@ class NifWord(NifStructure):
         if self.lemma is not None:
             s += f'  lemma : "{self.lemma}"\n'
         if self.pos is not None and self.pos != []:
-            s += f'  pos : {", ".join([str(m).replace(OLIA, "olia:") for m in self.pos])}\n'
+            pos = ", ".join([str(m).replace(OLIA, "olia:") for m in self.pos])
+            s += f'  pos : {pos}\n'
         if self.morphofeats is not None and self.morphofeats != []:
-            s += f'  morphofeats : {", ".join([str(m).replace(OLIA, "olia:") for m in self.morphofeats])}\n'
+            mf = ", ".join([str(m).replace(OLIA, "olia:") for m in self.morphofeats])
+            s += f'  morphofeats : {mf}\n'
         if self.dependency is not None and self.dependency != []:
-            s += f'  dependency : {", ".join([dep.uri for dep in self.dependency])}\n'  # [str(dep.uri) for dep in self.dependency]
+            dep = ", ".join([dep.uri for dep in self.dependency])
+            s += f'  dependency : {dep}\n'
         if self.dependencyRelationType is not None:
             s += f"  dependencyRelationtype : {self.dependencyRelationType}\n"
         return s

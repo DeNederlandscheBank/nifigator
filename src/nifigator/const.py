@@ -3,8 +3,9 @@
 """
 """
 
+from collections import namedtuple
 from rdflib.namespace import Namespace
-from rdflib.term import IdentifiedNode, URIRef
+from rdflib.term import URIRef
 
 OffsetBasedString = URIRef(
     "http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#OffsetBasedString"
@@ -224,8 +225,6 @@ def mapobject(p: str = "", o: str = ""):
 
 # nafdocument definition
 
-from collections import namedtuple
-
 ProcessorElement = namedtuple(
     "lp", "name version model timestamp beginTimestamp endTimestamp hostname"
 )
@@ -234,7 +233,8 @@ WordformElement = namedtuple("WfElement", "id sent para page offset length xpath
 
 TermElement = namedtuple(
     "TermElement",
-    "id type lemma pos morphofeat netype case head component_of compound_type span ext_refs comment",
+    "id type lemma pos morphofeat netype case head component_of \
+    compound_type span ext_refs comment",
 )
 
 Entity = namedtuple("Entity", "start end type")

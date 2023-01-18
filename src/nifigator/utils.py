@@ -17,10 +17,15 @@ def generate_uuid(prefix: str = "nif-", uri: str = None):
     return prefix + uuid.uuid3(uuid.NAMESPACE_DNS, uri).hex
 
 
-def natural_sort(l):
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
-    return sorted(l, key=alphanum_key)
+def natural_sort(elements):
+
+    def convert_to_int(text):
+        return int(text) if text.isdigit() else text.lower()
+
+    def alphanum_key(key):
+        return [convert_to_int(c) for c in re.split("([0-9]+)", key)]
+
+    return sorted(elements, key=alphanum_key)
 
 
 def delete_accents(s: str = None, lang: str = "en"):
