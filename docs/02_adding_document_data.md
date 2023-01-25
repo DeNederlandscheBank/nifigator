@@ -88,51 +88,21 @@ context.set_Pages(pages)
 context.pages[45]
 ```
 
-## Paragraph offsets
-
-Similarly it can be necessary to know the specific paragraph number that contains a certain part of the text.
+The page offsets are aligned with the context string. 
 
 ```python
-from nifigator import NifParagraph
-
-# A list of NifParagraphs is created using the paragraph offsets from the pdf
-paragraphs = [
-    NifParagraph(
-        URIScheme=OffsetBasedString,
-        uri=uri,
-        beginIndex=paragraph.beginIndex,
-        endIndex=paragraph.endIndex,
-        referenceContext=context
-    )
-    for paragraph in pdf.paragraph_offsets]
-
-context.set_Paragraphs(paragraphs)
+# The page offsets are aligned with the context string
+for page in pdf.page_offsets[1:2]:
+    print(repr(context.isString[page.beginIndex:page.endIndex]))
 ```
 
-The paragraphs are then retrievable as a list from the context, for example:
-
-```python
-context.paragraphs[150]
-```
-
-which gives:
+which gives
 
 ```console
-(nif:Paragraph) uri = https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f#offset_124771_125627
-  beginIndex : 124771
-  endIndex : 125627
-  anchorOf : '\nConstruction of the new DNB Cash Centre in Zeist, a sustainable facility, is progressing well.
-\n\nDuring demolition work on the head office building at Frederiksplein, asbestos was found in a \n\nlarge
-part of the building’s structure, which means the renovation will experience some delay. \n\nThe move back to
-our head office will therefore take place in 2024, which is later than we had \n\nanticipated. In 2021 the
-round Satellite tower was dismantled, and it will be given a new purpose \n\nelsewhere. Some of its concrete
-is being reused as part of a circular chain in the building and \n\nelsewhere in Amsterdam. The structural
-construction phase of the DNB Cash Centre has been \n\ncompleted, and the finishing phase has started.
-Ecological integration is a major consideration in \n\nthe\xa0design and construction phases. See also Annex 1
-Additional information.\n'
+'De Nederlandsche Bank N.V.\n2021 Annual Report\n\nStriking a new balance\n\nPresented to the General Meeting on 16 March 2022.\n\n1\n\nDNB Annual Report 2021'
 ```
 
-We can then derive the linguistic data, add this to a collection
+By adding the linguistic data we can generate a complete graph:
 
 ```python
 import stanza
@@ -152,8 +122,4 @@ and serialize the graph to a file in hext-format:
 
 ```python
 g.serialize("..//data//"+generate_uuid(uri=original_uri)+".hext", format="hext")
-```
-
-```python
-
 ```

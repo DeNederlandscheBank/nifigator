@@ -1,2 +1,1 @@
-
-from .test_nifobjects import *
+# -*- coding: utf-8 -*-
