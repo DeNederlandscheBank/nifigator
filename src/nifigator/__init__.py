@@ -2,7 +2,7 @@
 
 import sys
 
-if sys.version_info[:2] >= (3, 8):
+if sys.version_info[:2] >= (3, 9):
     # TODO: Import directly (no need for conditional) when `python_requires = >= 3.8`
     from importlib.metadata import PackageNotFoundError, version  # pragma: no cover
 else:
@@ -13,7 +13,7 @@ try:
     dist_name = __name__
     __version__ = version(dist_name)
 except PackageNotFoundError:  # pragma: no cover
-    __version__ = "0.1.4"
+    __version__ = "0.1.6"
 finally:
     del version, PackageNotFoundError
 
