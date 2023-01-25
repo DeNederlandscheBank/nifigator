@@ -3,13 +3,12 @@
 """naf document."""
 
 import logging
-import re
+import datetime
 
 from lxml import etree
 
 from .const import (
     ChunkElement,
-    ComponentElement,
     DependencyRelation,
     EntityElement,
     MultiwordElement,
@@ -187,7 +186,7 @@ class NafDocument(etree._ElementTree):
                     for child3 in child2:
                         if child3.tag == EXT_REF_OCCURRENCE_TAG:
                             ext_refs.append(child3.attrib)
-                    entity_data["ext_refs"] = ext_refs
+                    term_data["ext_refs"] = ext_refs
             terms.append(term_data)
         return terms
 
@@ -520,7 +519,7 @@ class NafDocument(etree._ElementTree):
         """Return custom made layer of the NAF document"""
         layer = self.find(name)
         if layer is not None:
-            l = list()
+            layer_list = list()
             for item in layer:
                 if item.text is not None:
                     item_data = dict({"text": item.text}, **dict(item.attrib))
@@ -531,12 +530,12 @@ class NafDocument(etree._ElementTree):
                         targets = list()
                         for child3 in span:
                             if child3.tag == etree.Comment:
-                                entity_data["text"] = child3.text
+                                item_data["text"] = child3.text
                             elif child3.tag == TARGET_OCCURRENCE_TAG:
                                 targets.append(child3.attrib)
                     item_data["span"] = targets
-                l.append(item_data)
-            return l
+                layer_list.append(item_data)
+            return layer_list
         return super().name
 
     def set_language(self, language: str):
@@ -657,7 +656,7 @@ class NafDocument(etree._ElementTree):
             pages CDATA #IMPLIED
         """
         naf_header = self.find(NAF_HEADER)
-        filedesc_element = self.subelement(
+        _ = self.subelement(
             element=naf_header, tag=FILEDESC_ELEMENT_TAG, data=data
         )
 
@@ -667,7 +666,8 @@ class NafDocument(etree._ElementTree):
             <public> is an empty element which stores public information about
             the document, such as its URI. It has the following attributes:
 
-            - publicId: a public identifier (for instance, the number inserted by the capture server) (optional).
+            - publicId: a public identifier (for instance, the number
+              inserted by the capture server) (optional).
             - uri: a public URI of the document (optional).
 
         ELEMENT public EMPTY
@@ -687,10 +687,12 @@ class NafDocument(etree._ElementTree):
     def add_processor_element(self, layer: str, data: ProcessorElement):
         """
         LINGUISTICPROCESSORS ELEMENT
-            <linguisticProcessors> elements store the information about which linguistic processors
-            produced the NAF document. There can be several <linguisticProcessors> elements, one
-              per NAF layer. NAF layers correspond to the top-level elements of the
-              documents, such as "text", "terms", "deps" etc.
+            <linguisticProcessors> elements store the information
+            about which linguistic processors
+            produced the NAF document. There can be several
+            <linguisticProcessors> elements, one
+              per NAF layer. NAF layers correspond to the top-level
+              elements of the documents, such as "text", "terms", "deps" etc.
 
         ELEMENT linguisticProcessors (lp)+
 
@@ -703,13 +705,15 @@ class NafDocument(etree._ElementTree):
 
                  - name: the name of the processor
                  - version: processor's version
-                 - timestamp: a timestamp, denoting the date/time at which the processor was
-                 launched. The timestamp follows the XML Schema xs:dateTime type (See
-                 http://www.w3.org/TR/xmlschema-2/#isoformats). In summary, the date is
-                 specified following the form "YYYY-MM-DDThh:mm:ss" (all fields
-                 required). To specify a time zone, you can either enter a dateTime in UTC
-                 time by adding a "Z" behind the time ("2002-05-30T09:00:00Z") or you can
-                 specify an offset from the UTC time by adding a positive or negative time
+                 - timestamp: a timestamp, denoting the date/time at
+                 which the processor was launched. The timestamp
+                 follows the XML Schema xs:dateTime type (See
+                 http://www.w3.org/TR/xmlschema-2/#isoformats). In summary, the
+                 date is specified following the form "YYYY-MM-DDThh:mm:ss" (all
+                 fields required). To specify a time zone, you can either enter
+                 a dateTime in UTC time by adding a "Z" behind the time
+                 ("2002-05-30T09:00:00Z") or you can specify an offset from
+                 the UTC time by adding a positive or negative time
                  behind the time ("2002-05-30T09:00:00+06:00").
                  - beginTimestamp (optional): a timestamp, denoting the date/time at
                  which the processor started the process. It follows the XML Schema
@@ -733,12 +737,13 @@ class NafDocument(etree._ElementTree):
             tag=LINGUISTIC_LAYER_TAG,
             data={"layer": layer},
         )
-        lp = self.subelement(element=proc, tag=LINGUISTIC_OCCURRENCE_TAG, data=data)
+        _ = self.subelement(element=proc, tag=LINGUISTIC_OCCURRENCE_TAG, data=data)
 
     def add_wf_element(self, data: WordformElement, cdata: bool):
         """
         WORDFORM ELEMENT
-            <wf> elements describe and contain all word foorms generated after the tokenization step
+            <wf> elements describe and contain all word foorms generated after
+            the tokenization step
               <wf> elements have the following attributes:
                 - id: the id of the word form (REQUIRED and UNIQUE)
                 - sent: sentence id of the word form (optional)
@@ -746,7 +751,8 @@ class NafDocument(etree._ElementTree):
                 - page: page id of the word form (optional)
                 - offset: the offset (in characters) of the word form (optional)
                 - length: the length (in characters) of the word form (optional)
-                - xpath: in case of source xml files, the xpath expression identifying the original word form (optional)
+                - xpath: in case of source xml files, the xpath expression
+                identifying the original word form (optional)
 
         ELEMENT wf (#PCDATA|subtoken)*
 
@@ -805,7 +811,7 @@ class NafDocument(etree._ElementTree):
         if comments:
             layer.append(etree.Comment(data.comment))
 
-        dep = self.subelement(
+        _ = self.subelement(
             element=layer,
             tag=DEP_OCCURRENCE_TAG,
             data=data,
@@ -817,7 +823,8 @@ class NafDocument(etree._ElementTree):
         ENTITY ELEMENT
             A named entity element has the following attributes:
             -   id: the id for the named entity (REQUIRED)
-            -   type:  type of the named entity. (IMPLIED) Currently, 8 values are possible:
+            -   type:  type of the named entity. (IMPLIED) Currently,
+            8 values are possible:
             -   Person
             -   Organization
             -   Location
@@ -859,13 +866,16 @@ class NafDocument(etree._ElementTree):
             close: close category term
             lemma: lemma of the term (IMPLIED).
             pos: part of speech. (IMPLIED)
-            Users are encourage to provide URIs to part of speech values to dereference these them.
-            more complex pos attributes may be formed by concatenating values separated
-            by a dot ".".
+            Users are encourage to provide URIs to part of speech values to
+            dereference these them.
+            more complex pos attributes may be formed by concatenating values
+            separated by a dot ".".
             morphofeat: morphosyntactic feature encoded as a single attribute.
             case: declension case of the term (optional).
-            head: if the term is a compound, the id of the head component (optional).
-            component_of: if the term is part of multiword, i.e., referenced by a multiwords/mw element
+            head: if the term is a compound, the id of the head component
+            (optional).
+            component_of: if the term is part of multiword, i.e., referenced
+            by a multiwords/mw element
             than this attribute can be used to make reference to the multiword.
             compound_type: endocentric or exocentric
 
@@ -962,7 +972,8 @@ class NafDocument(etree._ElementTree):
         ELEMENT externalReferences (externalRef)+
 
         EXTERNALREF ELEMENT
-            <externalRef> elements have the following attributes:- resource: indicates the identifier of the resource
+            <externalRef> elements have the following attributes:
+            - resource: indicates the identifier of the resource
             referred to.
             - reference: code of the referred element. If the element is a
             synset of some version of WordNet, it follows the pattern:
@@ -979,7 +990,8 @@ class NafDocument(etree._ElementTree):
             r adverb
             examples of valid patterns are: ``ENG-20-12345678-n'',
             ``SPA-16-017403-v'', etc.
-            - confidence: a floating number between 0 and 1. Indicates the confidence weight of the association
+            - confidence: a floating number between 0 and 1.
+              Indicates the confidence weight of the association
 
         ELEMENT externalRef (sentiment|externalRef)*
 

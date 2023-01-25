@@ -1,5 +1,3 @@
-.. These are examples of badges you might want to add to your README:
-   please update the URLs accordingly
 
 .. image:: https://img.shields.io/pypi/v/nifigator.svg
     :alt: PyPI-Server
@@ -7,7 +5,7 @@
 
 .. image:: https://readthedocs.org/projects/nifigator/badge/?version=latest
     :alt: ReadTheDocs
-    :target: https://nifigator.readthedocs.io/en/stable/
+    :target: https://nifigator.readthedocs.io/en/latest/
 
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg
         :target: https://opensource.org/licenses/MIT
@@ -17,10 +15,6 @@
     :alt: Coveralls
     :target: https://coveralls.io/r/DeNederlandscheBank/nifigator
     
-.. image:: https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold
-    :alt: Project generated with PyScaffold
-    :target: https://pyscaffold.org/
-
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
         :target: https://github.com/psf/black
         :alt: Code style: black

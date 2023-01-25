@@ -73,7 +73,6 @@ def nafConverter(
     # create nif:sentence and nif:word
     doc_words = {word["id"]: word for word in nafdocument.text}
     doc_terms = {term["id"]: term for term in nafdocument.terms}
-    doc_entities = {entity["id"]: entity for entity in nafdocument.entities}
 
     doc_sentences = nafdocument.sentences
     for sent_idx, sentence in enumerate(doc_sentences):
@@ -240,7 +239,7 @@ def nafConverter(
             beginIndex=beginIndex,
             endIndex=endIndex,
             referenceContext=nif_context,
-            taClassRef=rdflib.term.URIRef(taClassRef),
+            taClassRef=URIRef(taClassRef),
             entityOccurrence=True,
             uri=base_uri + context_name,
             URIScheme=URIScheme,

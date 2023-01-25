@@ -7,7 +7,7 @@ from io import BytesIO
 from typing import Union
 
 from lxml import etree
-from pdfminer.converter import HTMLConverter, TextConverter, XMLConverter
+from pdfminer.converter import XMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage

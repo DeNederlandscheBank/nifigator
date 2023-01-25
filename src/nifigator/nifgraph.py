@@ -1,28 +1,22 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import re
 import uuid
 from collections import defaultdict
 from typing import Optional, Union
 from zipfile import ZipFile
 
 from rdflib import Graph
-from rdflib.namespace import DC, DCTERMS, RDF, RDFS, XSD, Namespace, NamespaceManager
+from rdflib.namespace import DC, DCTERMS, NamespaceManager
 from rdflib.store import Store
-from rdflib.term import IdentifiedNode, Literal, URIRef
+from rdflib.term import IdentifiedNode, URIRef
 
-from .const import ITSRDF, NIF, NIF_ONTOLOGY, OLIA, UD2OLIA_mappings, mapobject
+from .const import ITSRDF, NIF, OLIA
 from .converters import nafConverter
 from .nafdocument import NafDocument
 from .nifobjects import (
     NifContext,
     NifContextCollection,
-    NifPage,
-    NifParagraph,
-    NifPhrase,
-    NifSentence,
-    NifWord,
 )
 
 DEFAULT_URI = "https://mangosaurus.eu/rdf-data/"
@@ -54,7 +48,7 @@ class NifGraph(Graph):
         identifier: Optional[Union[IdentifiedNode, str]] = None,
         namespace_manager: Optional[NamespaceManager] = None,
         base: Optional[str] = None,
-        bind_namespaces: "_NamespaceSetString" = "core",
+        bind_namespaces: str = "core",
     ):
         """
         An NIF Graph
@@ -160,8 +154,10 @@ class NifGraph(Graph):
         """
         Read data from a file.
 
-        filename ending with "naf.xml": file is read and parsed as an xml file in NLP Annotation Format.
-        filename ending with "zip": file is extracted and content is parsed.
+        filename ending with "naf.xml": file is read and parsed as
+        an xml file in NLP Annotation Format.
+        filename ending with "zip": file is extracted and content
+        is parsed.
 
         :param file: a filename.
 
@@ -203,7 +199,8 @@ class NifGraph(Graph):
     @property
     def collection(self, uri: str = DEFAULT_URI):
         """
-        This property constructs and returns a `nif:ContextCollection` from the `NifGraph`.
+        This property constructs and returns a `nif:ContextCollection`
+        from the `NifGraph`.
         """
 
         def query_rdf_type(rdf_type: URIRef = None):
@@ -317,9 +314,11 @@ class NifGraph(Graph):
     # def olia_annotations(self):
     #     """
     #     """
-    #     df = self.extract(rdf_type="nif:Word", predicate="nif:oliaLink").reset_index()
+    #     df = self.extract(rdf_type="nif:Word",
+    #                       predicate="nif:oliaLink").reset_index()
     #     df[1] = True
-    #     df = df.pivot_table(index=['index'], columns=['nif:oliaLink'], values=True, fill_value=0)
+    #     df = df.pivot_table(index=['index'],
+    #                         columns=['nif:oliaLink'], values=True, fill_value=0)
     #     df.index = self.natural_sort(df.index)
     #     return df
 
@@ -352,7 +351,8 @@ class NifGraph(Graph):
     #         columns=columns,
     #         data=data
     #     )
-    #     # apply natural sort on indices (because they contain offsets without preceding zeros)
+    #     # apply natural sort on indices (because they
+    #     # contain offsets without preceding zeros)
     #     df.index = self.natural_sort(df.index)
     #     df.index.name = "index"
     #     return df
