@@ -631,26 +631,21 @@ class NifContext(NifString):
 
             if self._sentences is not None:
                 for sentence in self._sentences:
-                    for triple in sentence.triples():
-                        yield triple
+                    sentence.triples()
 
             if self._paragraphs is not None:
                 for paragraph in self._paragraphs:
-                    for triple in paragraph.triples():
-                        yield triple
+                    paragraph.triples()
 
             if self._pages is not None:
                 for page in self._pages:
-                    for triple in page.triples():
-                        yield triple
+                    page.triples()
 
             if self._phrases is not None:
                 for phrase in self._phrases:
-                    for triple in phrase.triples():
-                        yield triple
+                    phrase.triples()
 
-            for triple in super().triples():
-                yield triple
+            super().triples()
 
     def load(self, graph: Graph = None, uri: URIRef = None):
         """
@@ -875,8 +870,7 @@ class NifStructure(NifString):
         Generates all the triples
         """
         if self.uri is not None:
-            for triple in super().triples():
-                yield triple
+            super().triples()
 
 
 class NifPhrase(NifStructure):
@@ -1075,8 +1069,7 @@ class NifPhrase(NifStructure):
                 yield (self.uri, ITSRDF.taIdentRef, self._taIdentRef)
             if self.taConfidence is not None:
                 yield (self.uri, ITSRDF.taConfidence, self._taConfidence)
-            for triple in super().triples():
-                yield triple
+            super().triples()
 
     def load(
         self,
@@ -1242,8 +1235,7 @@ class NifSentence(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Sentence)
-            for triple in super().triples():
-                yield triple
+            super().triples()
             if self.nextSentence is not None:
                 yield (self.uri, NIF.nextSentence, self.nextSentence.uri)
             if self.previousSentence is not None:
@@ -1254,8 +1246,7 @@ class NifSentence(NifStructure):
                 yield (self.uri, NIF.lastWord, self.lastWord.uri)
 
             for word in self._words:
-                for triple in word.triples():
-                    yield triple
+                word.triples()
 
     def load(
         self,
@@ -1381,8 +1372,7 @@ class NifParagraph(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Paragraph)
-            for triple in super().triples():
-                yield triple
+            super().triples()
 
     def load(
         self,
@@ -1458,8 +1448,7 @@ class NifPage(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Page)
-            for triple in super().triples():
-                yield triple
+            super().triples()
 
     def load(
         self,
@@ -1759,8 +1748,7 @@ class NifWord(NifStructure):
             yield (self.uri, RDF.type, NIF.Word)
             if self._nifsentence is not None:
                 yield (self.uri, NIF.sentence, self._nifsentence.uri)
-            for triple in super().triples():
-                yield triple
+            super().triples()
             if self._anchorOf is not None:
                 yield (self.uri, NIF.anchorOf, self._anchorOf)
             if self.anchorOf_no_accents is not None:
@@ -1923,5 +1911,4 @@ class NifContextCollection(NifBase):
                 yield (self.uri, DCTERMS.conformsTo, self.conformsTo)
             for context in self.hasContext:
                 yield (self.uri, NIF.hasContext, context.uri)
-                for triple in context.triples():
-                    yield triple
+                context.triples()

@@ -1,6 +1,4 @@
-# coding: utf-8
-
-"""nif graph"""
+# -*- coding: utf-8 -*-
 
 import logging
 import re
