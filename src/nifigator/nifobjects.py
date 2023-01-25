@@ -7,7 +7,7 @@ from typing import Union
 import iribaker
 from rdflib import Graph
 from rdflib.namespace import DC, DCTERMS, RDF, XSD
-from rdflib.term import Literal, URIRef
+from rdflib.term import IdentifiedNode, Literal, URIRef
 
 from .const import (
     ITSRDF,
@@ -29,6 +29,14 @@ class NifContext:
 
 
 class NifSentence:
+    pass
+
+
+class NifParagraph:
+    pass
+
+
+class NifPage:
     pass
 
 
@@ -66,8 +74,7 @@ class NifBase(object):
 
     def set_uri(self, uri: Union[URIRef, str] = None):
         """
-        Sets the uri of the object.
-        If the uri is a string then it is converted to an iri.
+        Sets the uri of the object. If the uri is a string then it is converted to an iri.
         """
         if isinstance(uri, str):
             self._uri = URIRef(iribaker.to_iri(uri))
@@ -232,9 +239,8 @@ class NifString(NifBase):
 
     def set_beginIndex(self, beginIndex: Union[Literal, int] = None):
         """
-        Sets the start of the index of the string.
-        The type of beginIndex can be a `Literal` or an `int`.
-        If the type is an `int` then it is converted to a Literal.
+        Sets the start of the index of the string. The type of beginIndex can be a `Literal` or
+        an `int`. If the type is an `int` then it is converted to a Literal.
         """
         if isinstance(beginIndex, int):
             self._beginIndex = Literal(beginIndex, datatype=XSD.nonNegativeInteger)
@@ -243,9 +249,8 @@ class NifString(NifBase):
 
     def set_endIndex(self, endIndex: Union[Literal, int] = None):
         """
-        Sets the end of the index of the string.
-        The type of endIndex can be a `Literal` or an `int`.
-        If the type is an `int` then it is converted to a Literal.
+        Sets the end of the index of the string. The type of endIndex can be a `Literal` or
+        an `int`. If the type is an `int` then it is converted to a Literal.
         """
         if isinstance(endIndex, int):
             self._endIndex = Literal(endIndex, datatype=XSD.nonNegativeInteger)
@@ -254,9 +259,7 @@ class NifString(NifBase):
 
     def set_referenceContext(self, referenceContext: NifContext = None):
         """
-        Sets the referenceContext of the object.
-        The anchorOf is set to the referenceContext string
-        with the beginIndex and endIndex.
+        Sets the referenceContext of the object. The anchorOf is set to the referenceContext string with the beginIndex and endIndex
         """
         if referenceContext is not None:
             if referenceContext.isString is not None:
@@ -266,9 +269,7 @@ class NifString(NifBase):
 
     def set_anchorOf(self, anchorOf: str = None):
         """
-        Sets the anchorOf of the object.
-        The anchorOf should be consistent with the string in
-        the referenceContext.
+        Sets the anchorOf of the object. The anchorOf should be consistent with the string in the referenceContext.
         """
         if isinstance(anchorOf, str):
             self._anchorOf = Literal(anchorOf, datatype=XSD.string)
@@ -630,21 +631,26 @@ class NifContext(NifString):
 
             if self._sentences is not None:
                 for sentence in self._sentences:
-                    sentence.triples()
+                    for triple in sentence.triples():
+                        yield triple
 
             if self._paragraphs is not None:
                 for paragraph in self._paragraphs:
-                    paragraph.triples()
+                    for triple in paragraph.triples():
+                        yield triple
 
             if self._pages is not None:
                 for page in self._pages:
-                    page.triples()
+                    for triple in page.triples():
+                        yield triple
 
             if self._phrases is not None:
                 for phrase in self._phrases:
-                    phrase.triples()
+                    for triple in phrase.triples():
+                        yield triple
 
-            super().triples()
+            for triple in super().triples():
+                yield triple
 
     def load(self, graph: Graph = None, uri: URIRef = None):
         """
@@ -869,7 +875,8 @@ class NifStructure(NifString):
         Generates all the triples
         """
         if self.uri is not None:
-            super().triples()
+            for triple in super().triples():
+                yield triple
 
 
 class NifPhrase(NifStructure):
@@ -1068,7 +1075,8 @@ class NifPhrase(NifStructure):
                 yield (self.uri, ITSRDF.taIdentRef, self._taIdentRef)
             if self.taConfidence is not None:
                 yield (self.uri, ITSRDF.taConfidence, self._taConfidence)
-            super().triples()
+            for triple in super().triples():
+                yield triple
 
     def load(
         self,
@@ -1161,11 +1169,9 @@ class NifSentence(NifStructure):
                 s += f"  nextSentence : {repr(self.nextSentence.anchorOf)}\n"
         if self.previousSentence is not None:
             if len(self.previousSentence.anchorOf) > 100:
-                ps = repr(self.previousSentence.anchorOf[0:100])
-                s += f"  previousSentence : {ps}... \n"
+                s += f"  previousSentence : {repr(self.previousSentence.anchorOf[0:100])}... \n"
             else:
-                ps = repr(self.previousSentence.anchorOf)
-                s += f"  previousSentence : {ps}\n"
+                s += f"  previousSentence : {repr(self.previousSentence.anchorOf)}\n"
         if self.firstWord is not None:
             s += f'  firstWord : "{self.firstWord.anchorOf}"\n'
         if self.lastWord is not None:
@@ -1236,7 +1242,8 @@ class NifSentence(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Sentence)
-            super().triples()
+            for triple in super().triples():
+                yield triple
             if self.nextSentence is not None:
                 yield (self.uri, NIF.nextSentence, self.nextSentence.uri)
             if self.previousSentence is not None:
@@ -1247,7 +1254,8 @@ class NifSentence(NifStructure):
                 yield (self.uri, NIF.lastWord, self.lastWord.uri)
 
             for word in self._words:
-                word.triples()
+                for triple in word.triples():
+                    yield triple
 
     def load(
         self,
@@ -1373,7 +1381,8 @@ class NifParagraph(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Paragraph)
-            super().triples()
+            for triple in super().triples():
+                yield triple
 
     def load(
         self,
@@ -1449,7 +1458,8 @@ class NifPage(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Page)
-            super().triples()
+            for triple in super().triples():
+                yield triple
 
     def load(
         self,
@@ -1564,14 +1574,11 @@ class NifWord(NifStructure):
         if self.lemma is not None:
             s += f'  lemma : "{self.lemma}"\n'
         if self.pos is not None and self.pos != []:
-            pos = ", ".join([str(m).replace(OLIA, "olia:") for m in self.pos])
-            s += f'  pos : {pos}\n'
+            s += f'  pos : {", ".join([str(m).replace(OLIA, "olia:") for m in self.pos])}\n'
         if self.morphofeats is not None and self.morphofeats != []:
-            mf = ", ".join([str(m).replace(OLIA, "olia:") for m in self.morphofeats])
-            s += f'  morphofeats : {mf}\n'
+            s += f'  morphofeats : {", ".join([str(m).replace(OLIA, "olia:") for m in self.morphofeats])}\n'
         if self.dependency is not None and self.dependency != []:
-            dep = ", ".join([dep.uri for dep in self.dependency])
-            s += f'  dependency : {dep}\n'
+            s += f'  dependency : {", ".join([dep.uri for dep in self.dependency])}\n'  # [str(dep.uri) for dep in self.dependency]
         if self.dependencyRelationType is not None:
             s += f"  dependencyRelationtype : {self.dependencyRelationType}\n"
         return s
@@ -1752,7 +1759,8 @@ class NifWord(NifStructure):
             yield (self.uri, RDF.type, NIF.Word)
             if self._nifsentence is not None:
                 yield (self.uri, NIF.sentence, self._nifsentence.uri)
-            super().triples()
+            for triple in super().triples():
+                yield triple
             if self._anchorOf is not None:
                 yield (self.uri, NIF.anchorOf, self._anchorOf)
             if self.anchorOf_no_accents is not None:
@@ -1915,4 +1923,5 @@ class NifContextCollection(NifBase):
                 yield (self.uri, DCTERMS.conformsTo, self.conformsTo)
             for context in self.hasContext:
                 yield (self.uri, NIF.hasContext, context.uri)
-                context.triples()
+                for triple in context.triples():
+                    yield triple
