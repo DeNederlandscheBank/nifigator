@@ -18,7 +18,6 @@ def generate_uuid(prefix: str = "nif-", uri: str = None):
 
 
 def natural_sort(elements):
-
     def convert_to_int(text):
         return int(text) if text.isdigit() else text.lower()
 

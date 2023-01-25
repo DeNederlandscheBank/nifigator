@@ -656,9 +656,7 @@ class NafDocument(etree._ElementTree):
             pages CDATA #IMPLIED
         """
         naf_header = self.find(NAF_HEADER)
-        _ = self.subelement(
-            element=naf_header, tag=FILEDESC_ELEMENT_TAG, data=data
-        )
+        _ = self.subelement(element=naf_header, tag=FILEDESC_ELEMENT_TAG, data=data)
 
     def add_public_element(self, data: dict):
         """
