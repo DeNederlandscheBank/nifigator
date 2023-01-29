@@ -20,7 +20,7 @@ Version 0.1.2 (2023-1-18)
 * Updated several links
 * Added pytest test cases with code coverage
 
-Version 0.1.5 (2023-1-25)
+Version 0.1.7 (2023-1-29)
 =========================
 
 * Added join_hyphenated_words to pdfparser
