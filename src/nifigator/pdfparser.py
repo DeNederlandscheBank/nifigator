@@ -17,9 +17,11 @@ class PDFDocument:
 
     def __init__(
         self,
-        join_hyphenated_words=True,
+        join_hyphenated_words: bool=True,
+        ignore_control_characters: str="[\x00-\x08\x0b-\x0c\x0e-\x1f]"
     ):
         self.join_hyphenated_words = join_hyphenated_words
+        self.control_characters_to_ignore = regex.compile(self.ignore_control_characters)
         self.PDF_offset = namedtuple("PDF_offset", ["beginIndex", "endIndex"])
     
     def parse(
@@ -116,7 +118,6 @@ class PDFDocument:
         Return: str
         """
         # setup regexes
-        CONTROL = regex.compile("[\x00-\x08\x0b-\x0c\x0e-\x1f]")
         _hyphens = "\u00AD\u058A\u05BE\u0F0C\u1400\u1806\u2010\u2011\u2012\u2e17\u30A0-"
         _hyphen_newline = regex.compile(
             r"(?<=\p{L})[" + _hyphens + "][ \t\u00a0\r]*\n{1,2}[ \t\u00a0]*(?=\\p{L})"
@@ -140,7 +141,7 @@ class PDFDocument:
         text = "".join([t for t in text if t is not None])
 
         # delete control characters
-        text = CONTROL.sub("", text)
+        text = self.control_characters_to_ignore.sub("", text)
 
         # delete hyphens
         if self.join_hyphenated_words:
@@ -156,7 +157,6 @@ class PDFDocument:
         """
 
         # setup regexes
-        CONTROL = regex.compile("[\x00-\x08\x0b-\x0c\x0e-\x1f]")
         _hyphens = "\u00AD\u058A\u05BE\u0F0C\u1400\u1806\u2010\u2011\u2012\u2e17\u30A0-"
         _hyphen_newline = regex.compile(
             r"(?<=\p{L})[" + _hyphens + "][ \t\u00a0\r]*\n{1,2}[ \t\u00a0]*(?=\\p{L})"
@@ -173,16 +173,16 @@ class PDFDocument:
                     for textline in textbox:
                         for text_element in textline:
                             if text_element.text is not None:
-                                text += CONTROL.sub("", text_element.text)
+                                text += self.control_characters_to_ignore.sub("", text_element.text)
                     text += "\n"
                 elif textbox.tag == "figure":
                     for text_element in textbox:
                         if text_element.text is not None and text_element.text != '\n        ':
-                            text += CONTROL.sub("", text_element.text)
+                            text += self.control_characters_to_ignore.sub("", text_element.text)
                 elif textbox.tag == "textline":
                     for text_element in textbox:
                         if text_element.text is not None:
-                            text += CONTROL.sub("", text_element.text)
+                            text += self.control_characters_to_ignore.sub("", text_element.text)
             page_end = len(text)
 
             if self.join_hyphenated_words:
