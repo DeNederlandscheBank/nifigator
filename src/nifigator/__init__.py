@@ -13,7 +13,7 @@ try:
     dist_name = __name__
     __version__ = version(dist_name)
 except PackageNotFoundError:  # pragma: no cover
-    __version__ = "0.1.9"
+    __version__ = "0.1.10"
 finally:
     del version, PackageNotFoundError
 

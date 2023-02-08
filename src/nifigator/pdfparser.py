@@ -21,7 +21,7 @@ class PDFDocument:
         ignore_control_characters: str="[\x00-\x08\x0b-\x0c\x0e-\x1f]"
     ):
         self.join_hyphenated_words = join_hyphenated_words
-        self.control_characters_to_ignore = regex.compile(self.ignore_control_characters)
+        self.control_characters_to_ignore = regex.compile(ignore_control_characters)
         self.PDF_offset = namedtuple("PDF_offset", ["beginIndex", "endIndex"])
     
     def parse(
