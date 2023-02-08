@@ -25,8 +25,10 @@ from nifigator import PDFDocument
 # Extract text from a pdf
 filename = "..//data//dnb-annual-report-2021.pdf"
 with open(filename, mode="rb") as f:
-    pdf = PDFDocument(file=f.read())
+    pdf = PDFDocument().parse(file=f.read())
 ```
+
+Write the PDFDocument in xml format to a file with PDFDocument.write() and PDFDocument.getstream(), and open an already saved PDFDocument in xml format with PDFDocument.open().
 
 It is often useful to transform the original url or location of a document to a Universally Unique Identifier (UUID) when storing it.
 

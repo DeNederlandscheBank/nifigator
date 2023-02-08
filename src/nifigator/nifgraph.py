@@ -5,11 +5,12 @@ import uuid
 from collections import defaultdict
 from typing import Optional, Union
 from zipfile import ZipFile
+import pandas as pd
 
 from rdflib import Graph
 from rdflib.namespace import DC, DCTERMS, NamespaceManager
 from rdflib.store import Store
-from rdflib.term import IdentifiedNode, URIRef
+from rdflib.term import IdentifiedNode, URIRef, Literal
 
 from .const import ITSRDF, NIF, OLIA
 from .converters import nafConverter
@@ -265,50 +266,49 @@ class NifGraph(Graph):
                 collection.add_context(context=nif_context)
             return collection
 
-    # @property
-    # def catalog(self):
-    #     """
-    #     """
-    #     # derive the conformsTo from the collection
-    #     q = """
-    #     SELECT ?s
-    #     WHERE {
-    #         ?a rdf:type nif:ContextCollection .
-    #         ?a dcterms:conformsTo ?s
-    #     }"""
-    #     qres = self.query(q)
-    #     dcterms_conformsTo = [row[0] for row in qres]
+    @property
+    def catalog(self):
+        """
+        """
+        # derive the conformsTo from the collection
+        q = """
+        SELECT ?s
+        WHERE {
+            ?a rdf:type nif:ContextCollection .
+            ?a dcterms:conformsTo ?s
+        }"""
+        qres = self.query(q)
+        dcterms_conformsTo = [row[0] for row in qres]
 
-    #     # find all context in the graphs with corresponding data
-    #     q = """SELECT ?s ?p ?o WHERE { ?s rdf:type nif:Context . ?s ?p ?o . }"""
-    #     results = self.query(q)
+        # find all context in the graphs with corresponding data
+        q = """SELECT ?s ?p ?o WHERE { ?s rdf:type nif:Context . ?s ?p ?o . }"""
+        results = self.query(q)
 
-    #     # construct DataFrame from query results
-    #     d = defaultdict(dict)
-    #     index = list()
-    #     columns = set()
-    #     for result in results:
-    #         idx = result[0]
-    #         col = result[1].n3(self.namespace_manager)
-    #         if isinstance(result[2], rdflib.term.Literal):
-    #             val = result[2].value
-    #         else:
-    #             val = result[2]
-    #         # if ("dc:" in col or "dcterms:" in col or col == "nif:firstSentence"):
-    #         d[idx][col] = val
-    #         columns.add(col)
-    #         if idx not in index:
-    #             index.append(idx)
-    #     return d
+        # construct DataFrame from query results
+        d = defaultdict(dict)
+        index = list()
+        columns = set()
+        for result in results:
+            idx = result[0]
+            col = result[1].n3(self.namespace_manager)
+            if isinstance(result[2], Literal):
+                val = result[2].value
+            else:
+                val = result[2]
+            if ("dc:" in col or "dcterms:" in col):
+                d[idx][col] = val
+                columns.add(col)
+            if idx not in index:
+                index.append(idx)
 
-    # df = pd.DataFrame(
-    #     index=index,
-    #     columns=list(columns),
-    #     data = [[d[idx][col] for col in columns] for idx in index]
-    # )
-    # df['dcterms:conformsTo'] = [", ".join(dcterms_conformsTo)]*len(df.index)
-    # df = df.reindex(sorted(df.columns), axis=1)
-    # return df
+        df = pd.DataFrame(
+            index=index,
+            columns=list(columns),
+            data = [[d[idx][col] for col in columns] for idx in index]
+        )
+        df['dcterms:conformsTo'] = [", ".join(dcterms_conformsTo)]*len(df.index)
+        df = df.reindex(sorted(df.columns), axis=1)
+        return df
 
     # @property
     # def olia_annotations(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from collections import OrderedDict, deque
+from collections import OrderedDict, defaultdict, deque
 from typing import Union
 
 import iribaker
@@ -298,6 +298,45 @@ class NifString(NifBase):
                 yield (self.uri, NIF.endIndex, self._endIndex)
             if self._referenceContext is not None:
                 yield (self.uri, NIF.referenceContext, self._referenceContext.uri)
+
+    def load(
+        self,
+        graph: Graph = None,
+        referenceContext: NifContext = None,
+        uri: URIRef = None,
+    ):
+        """
+        Load a nif:String from a graph (based on uri)
+        """
+        for s, p, o in graph.triples((uri, NIF.beginIndex, None)):
+            self.set_beginIndex(o)
+        for s, p, o in graph.triples((uri, NIF.endIndex, None)):
+            self.set_endIndex(o)
+        for s, p, o in graph.triples((uri, NIF.anchorOf, None)):
+            self.set_anchorOf(o)
+        self.set_uri(uri)
+        self.set_referenceContext(referenceContext)
+        return self
+
+    def load_from_dict(
+        self,
+        d: dict=None, 
+        referenceContext: NifContext = None,
+        uri: URIRef = None,
+    ):
+        """
+        Load a paragraph from a dict
+        """
+        predicates = {
+            NIF.beginIndex: self.set_beginIndex,
+            NIF.endIndex: self.set_endIndex,
+            NIF.anchorOf: self.set_anchorOf
+        }
+        for p in d[uri].keys():
+            if p in predicates.keys():
+                predicates[p](d[uri][p])
+        self.set_uri(uri)
+        self.set_referenceContext(referenceContext)
 
 
 class NifContext(NifString):
@@ -656,60 +695,97 @@ class NifContext(NifString):
         """
         Load a context from a graph (based on uri)
         """
+        q = ("""
+        SELECT ?s ?p ?o
+        WHERE {
+            ?s nif:referenceContext """
+            + uri.n3(graph.namespace_manager)
+            + """ .
+            ?s ?p ?o .
+        }"""
+        )
+        results = list(graph.query(q))
+
+        predicates = {
+            NIF.isString: self.set_isString,
+            NIF.beginIndex: self.set_beginIndex,
+            NIF.endIndex: self.set_endIndex,
+            NIF.sourceUrl: self.set_sourceUrl,
+            NIF.predLang: self.set_predLang,
+            NIF.anchorOf: self.set_anchorOf,
+        }
+
         metadata = {}
-        for s, p, o in graph.triples((uri, RDF.type, None)):
-            if o == NIF.OffsetBasedString:
-                self.set_URIScheme(o)
-        for s, p, o in graph.triples((uri, NIF.isString, None)):
-            self.set_isString(o)
-        for s, p, o in graph.triples((uri, NIF.beginIndex, None)):
-            self.set_beginIndex(o)
-        for s, p, o in graph.triples((uri, NIF.endIndex, None)):
-            self.set_endIndex(o)
-        for s, p, o in graph.triples((uri, NIF.sourceUrl, None)):
-            self.set_sourceUrl(o)
-        for s, p, o in graph.triples((uri, NIF.predLang, None)):
-            self.set_predLang(o)
-        for s, p, o in graph.triples((uri, NIF.anchorOf, None)):
-            self.set_anchorOf(o)
-        for s, p, o in graph.triples((uri, NIF.firstSentence, None)):
-            first_sentence = o
-        for s, p, o in graph.triples((uri, NIF.lastSentence, None)):
-            last_sentence = o
-        for s, p, o in graph.triples((uri, NIF.nextSentence, None)):
-            self.set_nextSentence(o)
-        for s, p, o in graph.triples((uri, NIF.previousSentence, None)):
-            self.set_previousSentence(o)
-        for s, p, o in graph.triples((uri, None, None)):
+        sent_words = defaultdict(list)
+        sent_uris = []
+        page_uris = []
+        para_uris = []
+        phrase_uris = []
+        for s, p, o in results:
+            if p == RDF.type:
+                if o==NIF.Sentence:
+                    sent_uris.append(s)
+                if o==NIF.Page:
+                    page_uris.append(s)
+                if o==NIF.Paragraph:
+                    para_uris.append(s)
+                if o==NIF.Phrase:
+                    phrase_uris.append(s)
+                if o in [NIF.OffsetBasedString, NIF.RFC5147String]:
+                    self.set_URIScheme(o)
+            if p == NIF.sentence:
+                sent_words[o].append(s)
+            if p in predicates.keys():
+                predicates[p](o)
             if p in DC or p in DCTERMS:
                 metadata[p] = o
+
         self.set_uri(uri)
         self.set_referenceContext(self)
         self.set_metadata(metadata)
 
+        d = defaultdict(dict)
+        for s, p, o in results:
+            if p in [RDF.type, NIF.pos, NIF.oliaLink, NIF.dependency]:
+                # these are put into a list
+                if d[s].get(p, None) is not None:
+                    d[s][p].append(o)
+                else:
+                    d[s][p] = [o]
+            else:
+                d[s][p] = o
+
+        for s in sent_words.keys():
+            d[s]['nifwords'] = natural_sort(sent_words[s])
+
+        self.set_Sentences(
+            list(
+                NifSentence(URIScheme=self.URIScheme).load_from_dict(
+                    d=d, referenceContext=self, uri=sent_uri
+                )
+                for sent_uri in sent_uris
+            )
+        )
+
         page_uris = []
         para_uris = []
-        sent_uris = []
         phrase_uris = []
         for ref_uri, _, _ in graph.triples((None, NIF.referenceContext, uri)):
             if (ref_uri, RDF.type, NIF.Page) in graph:
                 page_uris.append(ref_uri)
             if (ref_uri, RDF.type, NIF.Paragraph) in graph:
                 para_uris.append(ref_uri)
-            if (ref_uri, RDF.type, NIF.Sentence) in graph:
-                sent_uris.append(ref_uri)
             if (ref_uri, RDF.type, NIF.Phrase) in graph:
                 phrase_uris.append(ref_uri)
         page_uris = natural_sort(page_uris)
         para_uris = natural_sort(para_uris)
-        sent_uris = natural_sort(sent_uris)
         phrase_uris = natural_sort(phrase_uris)
 
         # extract pages from graph
         self.set_Pages(
             list(
-                NifPage(URIScheme=self.URIScheme).load(
-                    graph=graph, referenceContext=self, uri=page_uri
+                NifPage(URIScheme=self.URIScheme).load_from_dict(
+                    d=d, referenceContext=self, uri=page_uri
                 )
                 for page_uri in page_uris
             )
@@ -717,8 +793,8 @@ class NifContext(NifString):
         # extract paragraphs from graph
         self.set_Paragraphs(
             list(
-                NifParagraph(URIScheme=self.URIScheme).load(
-                    graph=graph, referenceContext=self, uri=para_uri
+                NifParagraph(URIScheme=self.URIScheme).load_from_dict(
+                    d=d, referenceContext=self, uri=para_uri
                 )
                 for para_uri in para_uris
             )
@@ -726,38 +802,20 @@ class NifContext(NifString):
         # extract phrases from graph
         self.set_Phrases(
             list(
-                NifPhrase(URIScheme=self.URIScheme).load(
-                    graph=graph, referenceContext=self, uri=phrase_uri
+                NifPhrase(URIScheme=self.URIScheme).load_from_dict(
+                    d=d, referenceContext=self, uri=phrase_uri
                 )
                 for phrase_uri in phrase_uris
             )
         )
-        # extract sentences from graph
-        self.set_Sentences(
-            list(
-                NifSentence(URIScheme=self.URIScheme).load(
-                    graph=graph, referenceContext=self, uri=sent_uri
-                )
-                for sent_uri in sent_uris
-            )
-        )
+
         sentences = self.sentences
         if sentences is not None:
-
             for sent_idx, sentence in enumerate(sentences):
                 if sent_idx > 0:
                     sentence.set_previousSentence(sentences[sent_idx - 1])
                 if sent_idx < len(sentences) - 1:
                     sentence.set_nextSentence(sentences[sent_idx + 1])
-
-            if self.firstSentence.uri != first_sentence:
-                logging.error(
-                    "Error: firstSentence in rdf data not first sentence in context."
-                )
-            if self.lastSentence.uri != last_sentence:
-                logging.error(
-                    "Error: lastSentence in rdf data not last sentence in context."
-                )
 
         return self
 
@@ -794,7 +852,7 @@ class NifContext(NifString):
                     upos = word.get("upos", None)
                     if upos is not None:
                         if upos in upos2olia.keys():
-                            nif_word.set_pos(upos2olia.get(word["upos"]))
+                            nif_word.add_pos(upos2olia.get(word["upos"]))
                         else:
                             logging.error(
                                 ".. part-of-speech tag not found: " + word["upos"]
@@ -806,7 +864,7 @@ class NifContext(NifString):
                             o = i.split("=")[1]
                             olia = mapobject(p, o)
                             if olia is not None:
-                                nif_word.set_morphofeats(URIRef(olia))
+                                nif_word.add_morphofeat(URIRef(olia))
 
                 for word_idx, word in enumerate(sent):
 
@@ -1100,13 +1158,40 @@ class NifPhrase(NifStructure):
         for s, p, o in graph.triples((uri, ITSRDF.taConfidence, None)):
             self.set_taConfidence(o)
         for s, p, o in graph.triples((uri, RDF.type, None)):
-            if o == EntityOccurrence or o == TermOccurrence:
+            if o in [TermOccurrence, EntityOccurrence]:
                 self.set_PhraseType(o)
         self.set_uri(uri)
         self.set_referenceContext(referenceContext)
 
         return self
 
+    def load_from_dict(
+        self,
+        d: dict=None, 
+        referenceContext: NifContext = None,
+        uri: URIRef = None,
+    ):
+        """
+        Load a phrase from a dict
+        """
+        predicates = {
+            NIF.beginIndex: self.set_beginIndex,
+            NIF.endIndex: self.set_endIndex,
+            NIF.anchorOf: self.set_anchorOf,
+            ITSRDF.taIdentRef: self.set_taIdentRef,
+            ITSRDF.taClassRef: self.set_taClassRef,
+            ITSRDF.taConfidence: self.set_taConfidence,
+        }
+        for p in d[uri].keys():
+            if p in predicates.keys():
+                predicates[p](d[uri][p])
+            if p == RDF.type:
+                for item in d[uri][p]:
+                    if item in [NIF.TermOccurrence, NIF.EntityOccurrence]:
+                        self.set_PhraseType(item)
+        self.set_uri(uri)
+        self.set_referenceContext(referenceContext)
+        return self
 
 class NifSentence(NifStructure):
     """
@@ -1252,7 +1337,6 @@ class NifSentence(NifStructure):
                 yield (self.uri, NIF.firstWord, self.firstWord.uri)
             if self.lastWord is not None:
                 yield (self.uri, NIF.lastWord, self.lastWord.uri)
-
             for word in self._words:
                 for triple in word.triples():
                     yield triple
@@ -1326,6 +1410,55 @@ class NifSentence(NifStructure):
 
         return self
 
+    def load_from_dict(
+        self,
+        d: dict=None, 
+        referenceContext: NifContext = None,
+        uri: URIRef = None,
+    ):
+        """
+        Load a sentence from a dict
+        """
+        predicates = {
+            NIF.beginIndex: self.set_beginIndex,
+            NIF.endIndex: self.set_endIndex,
+            NIF.nextSentence: self.set_nextSentence,
+            NIF.previousSentence: self.set_previousSentence
+        }
+        for p in d[uri].keys():
+            if p in predicates.keys():
+                predicates[p](d[uri][p])
+        self.set_uri(uri)
+        self.set_referenceContext(referenceContext)
+
+        word_uris = d[uri]['nifwords']
+
+        # extract words from dict
+        words = OrderedDict()
+        for word_uri in word_uris:
+            words[word_uri] = NifWord(URIScheme=self.URIScheme).load_from_dict(
+                d=d,
+                referenceContext=self.referenceContext,
+                nifsentence=self,
+                uri=word_uri,
+            )
+        self.set_Words(words.values())
+
+        # replace dependency uris by word objects
+        for word_idx, word in enumerate(words.values()):
+            word.set_dependency([words[dep] for dep in word.dependency])
+
+        # replace nextWord and previousWord uris by word objects
+        words = self.words
+        if words is not None:
+            for word_idx, word in enumerate(words):
+                if word_idx > 0:
+                    word.set_previousWord(words[word_idx - 1])
+                if word_idx < len(words) - 1:
+                    word.set_nextWord(words[word_idx + 1])
+
+        return self
+
 
 class NifParagraph(NifStructure):
     """
@@ -1384,25 +1517,6 @@ class NifParagraph(NifStructure):
             for triple in super().triples():
                 yield triple
 
-    def load(
-        self,
-        graph: Graph = None,
-        referenceContext: NifContext = None,
-        uri: URIRef = None,
-    ):
-        """
-        Load a paragraph from a graph (based on uri)
-        """
-        for s, p, o in graph.triples((uri, NIF.beginIndex, None)):
-            self.set_beginIndex(o)
-        for s, p, o in graph.triples((uri, NIF.endIndex, None)):
-            self.set_endIndex(o)
-        for s, p, o in graph.triples((uri, NIF.anchorOf, None)):
-            self.set_anchorOf(o)
-        self.set_uri(uri)
-        self.set_referenceContext(referenceContext)
-        return self
-
 
 class NifPage(NifStructure):
     """
@@ -1460,26 +1574,6 @@ class NifPage(NifStructure):
             yield (self.uri, RDF.type, NIF.Page)
             for triple in super().triples():
                 yield triple
-
-    def load(
-        self,
-        graph: Graph = None,
-        referenceContext: NifContext = None,
-        uri: URIRef = None,
-    ):
-        """
-        Load a page from a graph (based on uri)
-        """
-        for s, p, o in graph.triples((uri, NIF.beginIndex, None)):
-            self.set_beginIndex(o)
-        for s, p, o in graph.triples((uri, NIF.endIndex, None)):
-            self.set_endIndex(o)
-        for s, p, o in graph.triples((uri, NIF.anchorOf, None)):
-            self.set_anchorOf(o)
-        self.set_uri(uri)
-        self.set_referenceContext(referenceContext)
-
-        return self
 
 
 # class NifTitle(NifStructure):
@@ -1678,37 +1772,25 @@ class NifWord(NifStructure):
         else:
             self._lemma = None
 
-    def set_pos(self, pos: Union[URIRef, list] = None):
+    def set_pos(self, pos: list = None):
         """
         Sets the part-of-speech (pos) of the word
         (a rdflib.URIRef or a list of rdflib.URIRef)
         """
         if pos is not None:
-            if isinstance(pos, list):
-                self._pos = pos
-            elif isinstance(pos, URIRef):
-                if self._pos is not None:
-                    self._pos.append(pos)
-                else:
-                    self._pos = [pos]
+            self._pos = pos
         else:
-            self._pos = []
+            self._pos = None
 
-    def set_morphofeats(self, morphofeats: Union[URIRef, list] = None):
+    def set_morphofeats(self, morphofeats: list = None):
         """
         Sets the morphological features of the word
         (a rdflib.URIRef or a list of rdflib.URIRef)
         """
         if morphofeats is not None:
-            if isinstance(morphofeats, list):
-                self._morphofeats = morphofeats
-            elif isinstance(morphofeats, URIRef):
-                if self._morphofeats is not None:
-                    self._morphofeats.append(morphofeats)
-                else:
-                    self._morphofeats = [morphofeats]
+            self._morphofeats = morphofeats
         else:
-            self._morphofeats = []
+            self._morphofeats = None
 
     def set_dependency(self, dependency: list = None):
         """
@@ -1750,6 +1832,24 @@ class NifWord(NifStructure):
             self.dependency.append(dependency)
         else:
             self.set_dependency([dependency])
+
+    def add_morphofeat(self, morphofeat: URIRef = None):
+        """
+        Add a morphofeat to the list of morphofeats of the word
+        """
+        if self.morphofeats is not None and self.morphofeats != []:
+            self.morphofeats.append(morphofeat)
+        else:
+            self.set_morphofeats([morphofeat])
+
+    def add_pos(self, pos: URIRef = None):
+        """
+        Add a pos to the list of pos of the word
+        """
+        if self.pos is not None and self.pos != []:
+            self.pos.append(pos)
+        else:
+            self.set_pos([pos])
 
     def triples(self):
         """
@@ -1816,9 +1916,9 @@ class NifWord(NifStructure):
         for s, p, o in graph.triples((uri, NIF.lemma, None)):
             self.set_lemma(o)
         for s, p, o in graph.triples((uri, NIF.pos, None)):
-            self.set_pos(o)
+            self.add_pos(o)
         for s, p, o in graph.triples((uri, NIF.oliaLink, None)):
-            self.set_morphofeats(o)
+            self.add_morphofeats(o)
         for s, p, o in graph.triples((uri, NIF.dependency, None)):
             self.add_dependency(o)
         for s, p, o in graph.triples((uri, NIF.dependencyRelationType, None)):
@@ -1827,15 +1927,41 @@ class NifWord(NifStructure):
         self.set_referenceContext(referenceContext)
         self.set_nifsentence(nifsentence)
 
-        if self.anchorOf != str(anchorOf):
-            logging.error(
-                "Error: anchorOf in rdf data ("
-                + self.anchorOf
-                + ") not anchorOf of in string ("
-                + anchorOf
-                + ")."
-            )
+        return self
 
+    def load_from_dict(
+        self,
+        d: dict=None, 
+        referenceContext: NifContext = None,
+        nifsentence: NifSentence = None,
+        uri: URIRef = None,
+    ):
+        """
+        Load a word from a dict
+        """
+        predicates = {
+            NIF.beginIndex: self.set_beginIndex,
+            NIF.endIndex: self.set_endIndex,
+            NIF.nextWord: self.set_nextWord,
+            NIF.previousWord: self.set_previousWord,
+            NIF.lemma: self.set_lemma,
+            NIF.dependencyRelationType: self.set_dependencyRelationType,
+        }
+        for p in d[uri].keys():
+            if p in predicates.keys():
+                predicates[p](d[uri][p])
+            if p == NIF.oliaLink:
+                for item in d[uri][p]:
+                    self.add_morphofeat(item)
+            if p == NIF.pos:
+                for item in d[uri][p]:
+                    self.add_pos(item)
+            if p == NIF.dependency:
+                for item in d[uri][p]:
+                    self.add_dependency(item)
+        self.set_uri(uri)
+        self.set_referenceContext(referenceContext)
+        self.set_nifsentence(nifsentence)
         return self
 
 

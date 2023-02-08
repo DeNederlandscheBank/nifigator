@@ -14,13 +14,22 @@ from pdfminer.pdfpage import PDFPage
 
 
 class PDFDocument:
+
     def __init__(
+        self,
+        join_hyphenated_words: bool=True,
+        ignore_control_characters: str="[\x00-\x08\x0b-\x0c\x0e-\x1f]"
+    ):
+        self.join_hyphenated_words = join_hyphenated_words
+        self.control_characters_to_ignore = regex.compile(ignore_control_characters)
+        self.PDF_offset = namedtuple("PDF_offset", ["beginIndex", "endIndex"])
+    
+    def parse(
         self,
         file: Union[str, BytesIO] = None,
         codec: str = "utf-8",
         password: str = "",
         laparams: LAParams = LAParams(),
-        join_hyphenated_words=True,
     ):
 
         """Function to convert pdf to xml or text
@@ -36,10 +45,6 @@ class PDFDocument:
         Returns:
 
         """
-        self.join_hyphenated_words = join_hyphenated_words
-
-        self.PDF_offset = namedtuple("PDF_offset", ["beginIndex", "endIndex"])
-
         rsrcmgr = PDFResourceManager()
         retstr = BytesIO()
         device = XMLConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
@@ -73,11 +78,46 @@ class PDFDocument:
 
         self.tree = etree.fromstring(result)
 
+        return self
+
+    def open(self, input: Union[str, bytes]):
+        """Function to open a PDFDocument in xml
+        Args:
+            input: the location of the PDFDocument in xml to be opened or a bytes object containing the file content
+        """
+        if isinstance(input, str):
+            with open(input, "r", encoding="utf-8") as f:
+                self.tree = etree.parse(f).getroot()
+        elif type(input) == bytes:
+            stream_data = io.BytesIO(input)
+            self.tree = etree.parse(stream_data).getroot()
+        else:
+            raise TypeError("invalid input, instead of bytes or string it is" + str(type(input)))
+        return self
+
+    def write(self, output: str) -> None:
+        """Function to write an PDFDocument in xml
+        Args:
+            output: the location of the PDFDocument in xml to be stored
+        """
+        self.tree.getroottree().write(output, encoding="utf-8", pretty_print=True, xml_declaration=True)
+
+    def getstream(self) -> bytes:
+        """
+        Function to stream the PDFDocument in xml
+        Returns: Bytesstream of the PDFDocument in xml
+        """
+        output = io.BytesIO()
+        super().write(output, encoding="utf-8", pretty_print=True, xml_declaration=True)
+        return output
+
     @property
     def text(self):
-
+        """
+        Property to extract text from PDFDocument
+        Return: str
+        """
         # setup regexes
-        CONTROL = regex.compile("[\x00-\x08\x0b-\x0c\x0e-\x1f]")
         _hyphens = "\u00AD\u058A\u05BE\u0F0C\u1400\u1806\u2010\u2011\u2012\u2e17\u30A0-"
         _hyphen_newline = regex.compile(
             r"(?<=\p{L})[" + _hyphens + "][ \t\u00a0\r]*\n{1,2}[ \t\u00a0]*(?=\\p{L})"
@@ -93,14 +133,15 @@ class PDFDocument:
                     text.append("\n")
                 elif textbox.tag == "figure":
                     for text_element in textbox:
-                        text.append(text_element.text)
+                        if text_element.text is not None and text_element.text != '\n        ':
+                            text.append(text_element.text)
                 elif textbox.tag == "textline":
                     for text_element in textbox:
                         text.append(text_element.text)
         text = "".join([t for t in text if t is not None])
 
         # delete control characters
-        text = CONTROL.sub("", text)
+        text = self.control_characters_to_ignore.sub("", text)
 
         # delete hyphens
         if self.join_hyphenated_words:
@@ -110,9 +151,12 @@ class PDFDocument:
 
     @property
     def page_offsets(self):
+        """
+        Property to extract page offsets from PDFDocument
+        Return: list of PDF_offset elements (named tuples)
+        """
 
         # setup regexes
-        CONTROL = regex.compile("[\x00-\x08\x0b-\x0c\x0e-\x1f]")
         _hyphens = "\u00AD\u058A\u05BE\u0F0C\u1400\u1806\u2010\u2011\u2012\u2e17\u30A0-"
         _hyphen_newline = regex.compile(
             r"(?<=\p{L})[" + _hyphens + "][ \t\u00a0\r]*\n{1,2}[ \t\u00a0]*(?=\\p{L})"
@@ -129,16 +173,16 @@ class PDFDocument:
                     for textline in textbox:
                         for text_element in textline:
                             if text_element.text is not None:
-                                text += CONTROL.sub("", text_element.text)
+                                text += self.control_characters_to_ignore.sub("", text_element.text)
                     text += "\n"
                 elif textbox.tag == "figure":
                     for text_element in textbox:
-                        if text_element.text is not None:
-                            text += CONTROL.sub("", text_element.text)
+                        if text_element.text is not None and text_element.text != '\n        ':
+                            text += self.control_characters_to_ignore.sub("", text_element.text)
                 elif textbox.tag == "textline":
                     for text_element in textbox:
                         if text_element.text is not None:
-                            text += CONTROL.sub("", text_element.text)
+                            text += self.control_characters_to_ignore.sub("", text_element.text)
             page_end = len(text)
 
             if self.join_hyphenated_words:
@@ -174,35 +218,3 @@ class PDFDocument:
                 page_offsets.append(self.PDF_offset(page_start, page_end))
 
         return page_offsets
-
-    # @property
-    # def paragraph_offsets(self):
-    #     paragraph_offsets = []
-    #     text = ""
-    #     for page in self.tree:
-    #         paragraph_start = len(text)
-    #         for textbox in page:
-    #             if textbox.tag == "textbox":
-    #                 for textline in textbox:
-    #                     for text_element in textline:
-    #                         if text_element.text is not None:
-    #                             text += self.CONTROL.sub("", text_element.text)
-    #                     if (len(textline[-2].text.strip()) > 0) and (
-    #                         textline[-2].text.strip()[-1] in [".", "?"]
-    #                     ):
-    #                         paragraph_end = len(text)
-    #                         paragraph_offsets.append(
-    #                             self.PDF_offset(paragraph_start, paragraph_end)
-    #                         )
-    #                         paragraph_start = len(text)
-    #                 text += "\n"
-    #             elif textbox.tag == "figure":
-    #                 for text_element in textbox:
-    #                     if text_element.text is not None:
-    #                         text += self.CONTROL.sub("", text_element.text)
-    #             elif textbox.tag == "textline":
-    #                 for text_element in textbox:
-    #                     if text_element.text is not None:
-    #                         text += self.CONTROL.sub("", text_element.text)
-
-    #     return paragraph_offsets
