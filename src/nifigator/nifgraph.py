@@ -7,6 +7,7 @@ from typing import Optional, Union
 from zipfile import ZipFile
 import pandas as pd
 
+import rdflib
 from rdflib import Graph
 from rdflib.namespace import DC, DCTERMS, NamespaceManager
 from rdflib.store import Store
@@ -206,16 +207,23 @@ class NifGraph(Graph):
 
         def query_rdf_type(rdf_type: URIRef = None):
 
-            q = (
-                """
-            SELECT ?s ?p ?o
-            WHERE {
-                ?s rdf:type """
-                + rdf_type.n3(self.namespace_manager)
-                + """ .
-                ?s ?p ?o .
-            }"""
-            )
+            if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
+                q = """
+                SELECT ?s ?p ?o
+                WHERE {
+                    SERVICE <"""+self.store.query_endpoint+""">
+                    {
+                        ?s rdf:type """+rdf_type.n3(self.namespace_manager)+""" .
+                        ?s ?p ?o .
+                    }
+                }"""
+            else:
+                q = """
+                SELECT ?s ?p ?o
+                WHERE {
+                    ?s rdf:type """+rdf_type.n3(self.namespace_manager)+""" .
+                    ?s ?p ?o .
+                }"""
             results = self.query(q)
 
             d = defaultdict(dict)
@@ -271,17 +279,42 @@ class NifGraph(Graph):
         """
         """
         # derive the conformsTo from the collection
-        q = """
-        SELECT ?s
-        WHERE {
-            ?a rdf:type nif:ContextCollection .
-            ?a dcterms:conformsTo ?s
-        }"""
+        if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
+            q = """
+            SELECT ?s
+            WHERE {
+                SERVICE <"""+self.store.query_endpoint+""">
+                {
+                    ?a rdf:type nif:ContextCollection .
+                    ?a dcterms:conformsTo ?s
+                }
+            }"""
+        else:
+            q = """
+            SELECT ?s
+            WHERE {
+                ?a rdf:type nif:ContextCollection .
+                ?a dcterms:conformsTo ?s
+            }"""
         qres = self.query(q)
         dcterms_conformsTo = [row[0] for row in qres]
 
         # find all context in the graphs with corresponding data
-        q = """SELECT ?s ?p ?o WHERE { ?s rdf:type nif:Context . ?s ?p ?o . }"""
+        if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
+            q = """
+            SELECT ?s ?p ?o 
+            WHERE { 
+                SERVICE <"""+self.store.query_endpoint+""">
+                {
+                    ?s rdf:type nif:Context . ?s ?p ?o . 
+                }
+            }"""
+        else:
+            q = """
+            SELECT ?s ?p ?o 
+            WHERE { 
+                ?s rdf:type nif:Context . ?s ?p ?o . 
+            }"""
         results = self.query(q)
 
         # construct DataFrame from query results

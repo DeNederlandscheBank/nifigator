@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict, deque
 from typing import Union
 
 import iribaker
+import rdflib
 from rdflib import Graph
 from rdflib.namespace import DC, DCTERMS, RDF, XSD
 from rdflib.term import IdentifiedNode, Literal, URIRef
@@ -695,15 +696,24 @@ class NifContext(NifString):
         """
         Load a context from a graph (based on uri)
         """
-        q = ("""
-        SELECT ?s ?p ?o
-        WHERE {
-            ?s nif:referenceContext """
-            + uri.n3(graph.namespace_manager)
-            + """ .
-            ?s ?p ?o .
-        }"""
-        )
+
+        if isinstance(graph.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
+            q = """
+            SELECT ?s ?p ?o
+            WHERE {
+                SERVICE <"""+graph.store.query_endpoint+""">
+                {
+                    ?s nif:referenceContext """+uri.n3(graph.namespace_manager)+""" .
+                    ?s ?p ?o .
+                }
+            }"""
+        else:
+            q = """
+            SELECT ?s ?p ?o
+            WHERE {
+                ?s nif:referenceContext """+uri.n3(graph.namespace_manager)+""" .
+                ?s ?p ?o .
+            }"""
         results = list(graph.query(q))
 
         predicates = {
@@ -739,6 +749,10 @@ class NifContext(NifString):
                 predicates[p](o)
             if p in DC or p in DCTERMS:
                 metadata[p] = o
+        sent_uris = natural_sort(sent_uris)
+        page_uris = natural_sort(page_uris)
+        para_uris = natural_sort(para_uris)
+        phrase_uris = natural_sort(phrase_uris)
 
         self.set_uri(uri)
         self.set_referenceContext(self)
@@ -766,20 +780,6 @@ class NifContext(NifString):
                 for sent_uri in sent_uris
             )
         )
-
-        page_uris = []
-        para_uris = []
-        phrase_uris = []
-        for ref_uri, _, _ in graph.triples((None, NIF.referenceContext, uri)):
-            if (ref_uri, RDF.type, NIF.Page) in graph:
-                page_uris.append(ref_uri)
-            if (ref_uri, RDF.type, NIF.Paragraph) in graph:
-                para_uris.append(ref_uri)
-            if (ref_uri, RDF.type, NIF.Phrase) in graph:
-                phrase_uris.append(ref_uri)
-        page_uris = natural_sort(page_uris)
-        para_uris = natural_sort(para_uris)
-        phrase_uris = natural_sort(phrase_uris)
 
         # extract pages from graph
         self.set_Pages(
