@@ -14,16 +14,15 @@ from pdfminer.pdfpage import PDFPage
 
 
 class PDFDocument:
-
     def __init__(
         self,
-        join_hyphenated_words: bool=True,
-        ignore_control_characters: str="[\x00-\x08\x0b-\x0c\x0e-\x1f]"
+        join_hyphenated_words: bool = True,
+        ignore_control_characters: str = "[\x00-\x08\x0b-\x0c\x0e-\x1f]",
     ):
         self.join_hyphenated_words = join_hyphenated_words
         self.control_characters_to_ignore = regex.compile(ignore_control_characters)
         self.PDF_offset = namedtuple("PDF_offset", ["beginIndex", "endIndex"])
-    
+
     def parse(
         self,
         file: Union[str, BytesIO] = None,
@@ -31,7 +30,6 @@ class PDFDocument:
         password: str = "",
         laparams: LAParams = LAParams(),
     ):
-
         """Function to convert pdf to xml or text
 
         Args:
@@ -92,7 +90,9 @@ class PDFDocument:
             stream_data = io.BytesIO(input)
             self.tree = etree.parse(stream_data).getroot()
         else:
-            raise TypeError("invalid input, instead of bytes or string it is" + str(type(input)))
+            raise TypeError(
+                "invalid input, instead of bytes or string it is" + str(type(input))
+            )
         return self
 
     def write(self, output: str) -> None:
@@ -100,7 +100,9 @@ class PDFDocument:
         Args:
             output: the location of the PDFDocument in xml to be stored
         """
-        self.tree.getroottree().write(output, encoding="utf-8", pretty_print=True, xml_declaration=True)
+        self.tree.getroottree().write(
+            output, encoding="utf-8", pretty_print=True, xml_declaration=True
+        )
 
     def getstream(self) -> bytes:
         """
@@ -133,7 +135,10 @@ class PDFDocument:
                     text.append("\n")
                 elif textbox.tag == "figure":
                     for text_element in textbox:
-                        if text_element.text is not None and text_element.text != '\n        ':
+                        if (
+                            text_element.text is not None
+                            and text_element.text != "\n        "
+                        ):
                             text.append(text_element.text)
                 elif textbox.tag == "textline":
                     for text_element in textbox:
@@ -173,16 +178,25 @@ class PDFDocument:
                     for textline in textbox:
                         for text_element in textline:
                             if text_element.text is not None:
-                                text += self.control_characters_to_ignore.sub("", text_element.text)
+                                text += self.control_characters_to_ignore.sub(
+                                    "", text_element.text
+                                )
                     text += "\n"
                 elif textbox.tag == "figure":
                     for text_element in textbox:
-                        if text_element.text is not None and text_element.text != '\n        ':
-                            text += self.control_characters_to_ignore.sub("", text_element.text)
+                        if (
+                            text_element.text is not None
+                            and text_element.text != "\n        "
+                        ):
+                            text += self.control_characters_to_ignore.sub(
+                                "", text_element.text
+                            )
                 elif textbox.tag == "textline":
                     for text_element in textbox:
                         if text_element.text is not None:
-                            text += self.control_characters_to_ignore.sub("", text_element.text)
+                            text += self.control_characters_to_ignore.sub(
+                                "", text_element.text
+                            )
             page_end = len(text)
 
             if self.join_hyphenated_words:

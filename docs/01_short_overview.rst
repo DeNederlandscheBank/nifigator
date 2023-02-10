@@ -50,7 +50,7 @@ It is possible to add linguistic annotations to the context from the output of a
         stanza_dict = nlp(context.isString).to_dict()
 
         # Load the dictionary in the context
-        context.load_from_dict(stanza_dict)
+        context.load_from_stanza_dict(stanza_dict)
 
 Now all data can be accessed from the :class:`~nifigator.nifobjects.NifContext` object.
 

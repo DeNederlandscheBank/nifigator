@@ -13,7 +13,6 @@ from rdflib.term import Literal
 
 
 def generate_uuid(prefix: str = "nif-", uri: str = None):
-
     return prefix + uuid.uuid3(uuid.NAMESPACE_DNS, uri).hex
 
 

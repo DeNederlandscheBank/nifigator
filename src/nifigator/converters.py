@@ -27,7 +27,6 @@ def nafConverter(
     base_prefix: str = None,
     URIScheme: str = None,
 ):
-
     collection_uri = base_uri + collection_name
     context_uri = base_uri + context_name
 
@@ -92,7 +91,6 @@ def nafConverter(
 
     nif_words = dict()
     for sent_idx, sentence in enumerate(doc_sentences):
-
         nif_context.add_sentence(sentence["nif"])
 
         # Add nextSentence and previousSentence to make graph traversable
@@ -145,7 +143,6 @@ def nafConverter(
             morphofeats = doc_terms[term["id"]].get("morphofeat", None)
             if morphofeats is not None:
                 for feat in morphofeats.split("|"):
-
                     if (
                         feat.split("=")[0] in ["Foreign", "Reflex", "Poss", "Abbr"]
                         and feat.split("=")[1] == "Yes"
@@ -266,9 +263,7 @@ def nafConverter(
     # create nif:paragraph
     doc_paragraphs = nafdocument.paragraphs
     for para_idx, paragraph in enumerate(doc_paragraphs):
-
         if paragraph["span"] != []:
-
             beginIndex = int(doc_words[paragraph["span"][0]["id"]]["offset"])
             endIndex = int(doc_words[paragraph["span"][-1]["id"]]["offset"]) + int(
                 doc_words[paragraph["span"][-1]["id"]]["length"]
