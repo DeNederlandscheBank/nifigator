@@ -1,7 +1,6 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,md
     text_representation:
       extension: .md
       format_name: markdown
@@ -13,7 +12,11 @@ jupyter:
     name: python3
 ---
 
-# Using a SPARQL endpoint
+
+# Using a SPARQL endpoint and running SPARQL queries
+
+
+## Connecting to a (local) SPARQL endpoint
 
 
 You can use an existing SPARQL endpoint in the following way.
@@ -75,6 +78,7 @@ collection = graph.extract_collection(collection_uri=collection_uri,
 ```
 
 ```python
+# show the string representation of the collection
 collection
 ```
 
@@ -84,6 +88,116 @@ collection
   hasContext : https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f
 ```
 
-```python
+## Running SPARQL queries
 
+
+### The total number of words in the collection
+
+
+```python
+# define the query for the total number of words
+q = """
+SELECT (count(?s) as ?num) WHERE {
+    SERVICE <http://localhost:3030/nifigator/sparql> {
+          ?s rdf:type nif:Word . 
+    }
+}
+"""
+
+# execute the query
+results = graph.query(q)
+
+# print the results
+for result in results:
+    print(result[0].value)
+```
+
+This returns
+
+```console
+68070
+```
+
+
+### The frequency of words per context
+
+```python
+# query for the frequency of words per context
+q = """
+SELECT ?w (count(?w) as ?num) WHERE {
+    SERVICE <http://localhost:3030/nifigator/sparql> {
+        ?s rdf:type nif:Word . 
+        ?s nif:anchorOf ?w .
+        ?s nif:referenceContext ?c .
+    }
+}
+GROUP BY ?w
+ORDER BY DESC(?num)
+LIMIT 10
+"""
+
+# execute the query
+results = graph.query(q)
+
+# print the results
+for result in results:
+    print((result[0].value, result[1].value))
+```
+
+This returns
+
+```console
+('the', 3713)
+('.', 2281)
+(',', 2077)
+('of', 1877)
+('and', 1736)
+('to', 1420)
+('in', 1411)
+(')', 892)
+('-', 874)
+('(', 865)
+```
+
+
+### Adjective-noun combinations in the context
+
+```python
+# query for the first 10 ADJ-NOUN combinations
+q = """
+SELECT ?a1 ?a WHERE {
+    SERVICE <http://localhost:3030/nifigator/sparql> {
+        ?s rdf:type nif:Word . 
+        ?s nif:pos olia:CommonNoun .
+        ?s nif:anchorOf ?a .
+        ?s nif:previousWord [ 
+            nif:pos olia:Adjective ;
+            nif:anchorOf ?a1
+        ]
+    }
+}
+LIMIT 10
+"""
+
+# execute the query
+results = graph.query(q)
+
+# print the results
+for result in results:
+    print((result[0].value, result[1].value))
+```
+
+This returns
+
+```console
+('Annual', 'Report')
+('supervisory', 'authorities')
+('financial', 'crime')
+('illegal', 'use')
+('non-commercial', 'purposes')
+('wide', 'availability')
+('terrorist', 'financing')
+('regular', 'supervision')
+('pre-pandemic', 'levels')
+('new', 'market')
 ```
