@@ -1101,6 +1101,8 @@ class NifPhrase(NifStructure):
         """
         if isinstance(taConfidence, float):
             self._taConfidence = Literal(taConfidence, datatype=XSD.float)
+        elif isinstance(taConfidence, str):
+            self._taConfidence = Literal(taConfidence, datatype=XSD.float)
         else:
             self._taConfidence = taConfidence
 

@@ -15,6 +15,9 @@ jupyter:
 
 # Using a SPARQL endpoint
 
+
+You can use an existing SPARQL endpoint in the following way.
+
 ```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as default
@@ -42,12 +45,21 @@ We can then check the number of triples in the store
 print("Number of triples: "+str(len(graph)))
 ```
 
+```console
+Number of triples: 1081392
+``` 
+
+
 To check the contexts in the graph you can use the catalog property. This property return a Pandas DataFrame with the context uris (in the index) with collection uri and the metadata (from DC and DCTERMS) available.
 
 ```python
 # get the catalog with all contexts within the graph
 catalog = graph.catalog
 catalog
+```
+
+```console
+
 ```
 
 ```python
@@ -58,10 +70,20 @@ context_uri = catalog.index[0]
 collection_uri = catalog.loc[context_uri, NIF.ContextCollection]
 
 # extract the collection with one context from the graph
-collection = graph.collection(collection_uri=collection_uri, 
-                              context_uris=[context_uri])
+collection = graph.extract_collection(collection_uri=collection_uri, 
+                                      context_uris=[context_uri])
 ```
 
 ```python
 collection
+```
+
+```console
+(nif:ContextCollection) uri = https://dnb.nl/rdf-data/
+  conformsTo : http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/2.1
+  hasContext : https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f
+```
+
+```python
+
 ```

@@ -115,8 +115,29 @@ g1 = Graph().parse(data=g.serialize(format="ttl"))
 print(g1.isomorphic(g))
 ```
 
-gives
+In some situations you might want to store the annotations in a different graph. You can do that in the following way:
+
+```python
+g_annotations = NifGraph()
+
+for phrase in collection.contexts[0].phrases:
+    for triple in phrase.triples():
+        g_annotations.add(triple)
+```
+
+Then the graph contains all data about the phrases and nothing else.
+
+```python
+from rdflib import RDF
+
+# retrieve and print all triples where the predicatie is rdf:type
+for triple in g_annotations.triples([None, RDF.type, None]):
+    print(triple)
+```
 
 ```console
-True
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#Phrase'))
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#EntityOccurrence'))
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#OffsetBasedString'))
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#String'))
 ```
