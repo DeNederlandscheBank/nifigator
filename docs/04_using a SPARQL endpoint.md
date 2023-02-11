@@ -201,3 +201,42 @@ This returns
 ('pre-pandemic', 'levels')
 ('new', 'market')
 ```
+
+```python
+# All two-word phrases ending with the lemma 'insurer' and starting with an adjective
+q = """
+SELECT distinct ?c ?a WHERE {
+    SERVICE <http://localhost:3030/nifigator/sparql> {
+        ?s rdf:type nif:Word . 
+        ?s nif:lemma "insurer"^^xsd:string .
+        ?s nif:anchorOf ?a .
+        ?s nif:previousWord [ 
+            nif:pos olia:Adjective ;
+            nif:anchorOf ?c ;
+        ]
+    }
+}
+"""
+
+# execute the query
+results = graph.query(q)
+
+# print the results
+for result in results:
+    print((result[0].value, result[1].value))
+```
+
+This gives:
+
+```console
+('eligible', 'insurers')
+('Non-life', 'insurers')
+('Dutch', 'insurers')
+('relevant', 'insurers')
+('non-life', 'insurers')
+('individual', 'insurers')
+```
+
+```python
+
+```
