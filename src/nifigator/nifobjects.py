@@ -1780,8 +1780,8 @@ class NifWord(NifStructure):
                 yield (self.uri, NIF.lemma, self._lemma)
             if self.pos is not None and self._pos != []:
                 for pos in self._pos:
-                    yield (self.uri, NIF.pos, _pos)
-            if self.morphofeats is not None and self._morphofeats != []:
+                    yield (self.uri, NIF.pos, pos)
+            if self._morphofeats is not None and self._morphofeats != []:
                 for morphofeat in self._morphofeats:
                     yield (self.uri, NIF.oliaLink, morphofeat)
             if self.nextWord is not None:
@@ -1794,7 +1794,7 @@ class NifWord(NifStructure):
                     NIF.dependencyRelationType,
                     self._dependencyRelationType,
                 )
-            if self.dependency is not None:
+            if self._dependency is not None:
                 for dep in self._dependency:
                     yield (self.uri, NIF.dependency, dep.uri)
 
