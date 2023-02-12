@@ -14,8 +14,8 @@ RAW_LAYER_TAG = "raw"
 TEXT_LAYER_TAG = "text"
 TEXT_OCCURRENCE_TAG = "wf"
 
-class NafBase(object):
 
+class NafBase(object):
     def __init__(self):
         pass
 
@@ -44,12 +44,11 @@ class NafBase(object):
                 del data[key]
         return data
 
-    def layer(self, tree: etree._ElementTree=None, layer_tag: str=None):
+    def layer(self, tree: etree._ElementTree = None, layer_tag: str = None):
         """ """
         layer = tree.find(layer_tag)
         if layer is None:
-            layer = etree.SubElement(
-                tree.getroot(), layer_tag)
+            layer = etree.SubElement(tree.getroot(), layer_tag)
         return layer
 
     def subelement(
@@ -77,13 +76,9 @@ class NafBase(object):
 
 
 class NafRawLayer(NafBase):
-    """
-    """
+    """ """
 
-    def __init__(
-        self,
-        raw: str=None
-    ):
+    def __init__(self, raw: str = None):
         self.set_raw(raw)
 
     def __str__(self):
@@ -105,31 +100,30 @@ class NafRawLayer(NafBase):
         else:
             return None
 
-    def set_raw(self, raw: str=None):
+    def set_raw(self, raw: str = None):
         """
         Sets the raw text of the document
         """
         self._raw = raw
 
-    def write(self, tree: etree._ElementTree=None):
+    def write(self, tree: etree._ElementTree = None):
         """
         Add the raw layer to the xml tree
         """
         layer = tree.find(RAW_LAYER_TAG)
         if layer is None:
-            layer = etree.SubElement(
-                tree.getroot(), RAW_LAYER_TAG)
+            layer = etree.SubElement(tree.getroot(), RAW_LAYER_TAG)
         layer.text = self._raw
 
-    def parse(self, tree: etree._ElementTree=None):
+    def parse(self, tree: etree._ElementTree = None):
         """
         Parse the raw layer from an xml tree
         """
         self._raw = self.find(RAW_LAYER_TAG).text
 
+
 class NafHeaderLayer(NafBase):
-    """
-    """
+    """ """
 
     def __init__(
         self,
@@ -153,22 +147,17 @@ class NafHeaderLayer(NafBase):
     def set_metadata(self, metadata):
         self._metadata = metadata
 
-    def write(self, tree: etree._ElementTree=None):
-        """
-        """
+    def write(self, tree: etree._ElementTree = None):
+        """ """
 
-    def parse(self, tree: etree._ElementTree=None):
-        """
-        """
+    def parse(self, tree: etree._ElementTree = None):
+        """ """
+
 
 class NafTextLayer(NafBase):
-    """
-    """
+    """ """
 
-    def __init__(
-        self,
-        wordforms: list[WordformElement]=None
-    ):
+    def __init__(self, wordforms: list[WordformElement] = None):
         self.set_wordforms(wordforms)
 
     def __str__(self):
@@ -185,9 +174,8 @@ class NafTextLayer(NafBase):
     def set_wordforms(self, wordforms: list[WordformElement]):
         self._wordforms = wordforms
 
-    def write(self, tree: etree._ElementTree=None):
-        """
-        """
+    def write(self, tree: etree._ElementTree = None):
+        """ """
         for wordform in self._wordforms:
             wf = self.subelement(
                 element=self.layer(tree, TEXT_LAYER_TAG),
@@ -198,14 +186,16 @@ class NafTextLayer(NafBase):
 
             wf.text = (
                 etree.CDATA(
-                    wordform.text if "]]>" not in wordform.text else " " * len(wordform.text))
+                    wordform.text
+                    if "]]>" not in wordform.text
+                    else " " * len(wordform.text)
+                )
                 # if cdata
                 # else wordform.text
             )
 
-    def parse(self, tree: etree._ElementTree=None):
-        """
-        """
+    def parse(self, tree: etree._ElementTree = None):
+        """ """
         self._wordforms = [
             WordformElement(
                 id=wordform.get("id", None),
@@ -220,9 +210,9 @@ class NafTextLayer(NafBase):
             for wordform in self.findall(TEXT_LAYER_TAG + "/" + TEXT_OCCURRENCE_TAG)
         ]
 
+
 class NafTermsLayer(NafBase):
-    """
-    """
+    """ """
 
     def __init__(
         self,
@@ -236,17 +226,15 @@ class NafTermsLayer(NafBase):
         s = ""
         return s
 
-    def write(self, tree: etree._ElementTree=None):
-        """
-        """
+    def write(self, tree: etree._ElementTree = None):
+        """ """
 
-    def parse(self, tree: etree._ElementTree=None):
-        """
-        """
+    def parse(self, tree: etree._ElementTree = None):
+        """ """
+
 
 class NafEntitiesLayer(object):
-    """
-    """
+    """ """
 
     def __init__(
         self,
@@ -260,17 +248,15 @@ class NafEntitiesLayer(object):
         s = ""
         return s
 
-    def write(self, tree: etree._ElementTree=None):
-        """
-        """
+    def write(self, tree: etree._ElementTree = None):
+        """ """
 
-    def parse(self, tree: etree._ElementTree=None):
-        """
-        """
+    def parse(self, tree: etree._ElementTree = None):
+        """ """
+
 
 class NafDepsLayer(object):
-    """
-    """
+    """ """
 
     def __init__(
         self,
@@ -284,10 +270,8 @@ class NafDepsLayer(object):
         s = ""
         return s
 
-    def write(self, tree: etree._ElementTree=None):
-        """
-        """
+    def write(self, tree: etree._ElementTree = None):
+        """ """
 
-    def parse(self, tree: etree._ElementTree=None):
-        """
-        """
+    def parse(self, tree: etree._ElementTree = None):
+        """ """

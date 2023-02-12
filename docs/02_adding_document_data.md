@@ -90,6 +90,14 @@ context.set_Pages(pages)
 context.pages[45]
 ```
 
+```console
+(nif:Page) uri = https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f#offset_105254_107257
+  beginIndex : 105254
+  endIndex : 107257
+  anchorOf : 'Cash and payment systems\n\nConfidence in the payment system remained high in 2021. In a survey held in August 2021, 74% \n\nof\xa0respondents had a high or very high level of confidence in the payment system. Only 1% has \n\nlittle or very little confidence. We studied the drivers of confidence in the payment system for the \n\nfirst time in 2021 (see Figure 4). Being able to pay safely is the primary driver of confidence in the \n\npayment system, but wide acceptance of electronic means of payment, easy payments and fast \n\npayments are also important considerations. \n\nFigure 4  Factors driving confidence in the payment system\n\nSecure payments - 6.0\n\nAcceptance: electronic - 5.8\n\nEasy payments - 5.8\n\nFast payments - 5.8\n\nProper supervision of banks - 5.7\n\nNo sharing of payment data - 5.6\n\nLow risk of fraud - 5.6\n\nNo use of payment data - 5.6\n\nAccessibility - 5.6\n\nNo disruptions - 5.6\n\nAcceptance: cash - 5.3\n\nEnvironment - 4.6\n\n0\n\n20\n\n40\n\n60\n\n80\n\n100\n\n1 Does not contribute \nto my confidence at all\n... '
+```
+
+
 The page offsets are aligned with the context string. 
 
 ```python

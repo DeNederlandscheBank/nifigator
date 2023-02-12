@@ -67,7 +67,7 @@ def test_nif_graph():
 
     nlp = stanza.Pipeline("en", verbose=False)
     stanza_dict = nlp(context.isString).to_dict()
-    context.load_from_dict(stanza_dict)
+    context.load_from_stanza_dict(stanza_dict)
 
     g = nifigator.NifGraph(collection=collection)
     collection = g.collection

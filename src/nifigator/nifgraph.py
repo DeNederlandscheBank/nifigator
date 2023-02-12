@@ -11,6 +11,7 @@ from rdflib import Graph
 from rdflib.namespace import DC, DCTERMS, NamespaceManager
 from rdflib.store import Store
 from rdflib.term import IdentifiedNode, URIRef, Literal
+from rdflib.plugins.stores import sparqlstore
 
 from .const import ITSRDF, NIF, OLIA
 from .converters import nafConverter
@@ -204,43 +205,8 @@ class NifGraph(Graph):
         from the `NifGraph`.
         """
 
-        def query_rdf_type(rdf_type: URIRef = None):
-
-            q = (
-                """
-            SELECT ?s ?p ?o
-            WHERE {
-                ?s rdf:type """
-                + rdf_type.n3(self.namespace_manager)
-                + """ .
-                ?s ?p ?o .
-            }"""
-            )
-            results = self.query(q)
-
-            d = defaultdict(dict)
-            for result in results:
-                idx = result[0]
-                col = result[1]
-                val = result[2]
-
-                if col == NIF.hasContext:
-                    if col in d[idx].keys():
-                        d[idx][col].append(val)
-                    else:
-                        d[idx][col] = [val]
-                elif val in OLIA:
-                    if col in d[idx].keys():
-                        d[idx][col].append(val)
-                    else:
-                        d[idx][col] = [val]
-                else:
-                    d[idx][col] = val
-
-            return d
-
-        dict_collections = query_rdf_type(NIF.ContextCollection)
-        dict_context = query_rdf_type(NIF.Context)
+        dict_collections = self.query_rdf_type(NIF.ContextCollection)
+        dict_context = self.query_rdf_type(NIF.Context)
         logging.info(".. extracting nif statements")
         logging.info(
             ".... found " + str(len(dict_collections.keys())) + " collections."
@@ -268,20 +234,60 @@ class NifGraph(Graph):
 
     @property
     def catalog(self):
-        """
-        """
+        """ """
         # derive the conformsTo from the collection
-        q = """
-        SELECT ?s
-        WHERE {
-            ?a rdf:type nif:ContextCollection .
-            ?a dcterms:conformsTo ?s
-        }"""
-        qres = self.query(q)
-        dcterms_conformsTo = [row[0] for row in qres]
+        if isinstance(self.store, sparqlstore.SPARQLUpdateStore):
+            q = (
+                """
+            SELECT ?s ?p ?o
+            WHERE {
+                SERVICE <"""
+                + self.store.query_endpoint
+                + """>
+                {
+                    ?s rdf:type nif:ContextCollection .
+                    ?s ?p ?o .
+                }
+            }"""
+            )
+        else:
+            q = """
+            SELECT ?s ?p ?o
+            WHERE {
+                ?s rdf:type nif:ContextCollection .
+                ?s ?p ?o .
+            }"""
+        results = self.query(q)
+        collections = defaultdict(dict)
+        for s, p, o in results:
+            if p == NIF.hasContext:
+                if collections[s].get(p, None) is None:
+                    collections[s][p] = [o]
+                else:
+                    collections[s][p].append(o)
+            else:
+                collections[s][p] = o
 
         # find all context in the graphs with corresponding data
-        q = """SELECT ?s ?p ?o WHERE { ?s rdf:type nif:Context . ?s ?p ?o . }"""
+        if isinstance(self.store, sparqlstore.SPARQLUpdateStore):
+            q = (
+                """
+            SELECT ?s ?p ?o 
+            WHERE { 
+                SERVICE <"""
+                + self.store.query_endpoint
+                + """>
+                {
+                    ?s rdf:type nif:Context . ?s ?p ?o . 
+                }
+            }"""
+            )
+        else:
+            q = """
+            SELECT ?s ?p ?o 
+            WHERE { 
+                ?s rdf:type nif:Context . ?s ?p ?o . 
+            }"""
         results = self.query(q)
 
         # construct DataFrame from query results
@@ -295,7 +301,7 @@ class NifGraph(Graph):
                 val = result[2].value
             else:
                 val = result[2]
-            if ("dc:" in col or "dcterms:" in col):
+            if "dc:" in col or "dcterms:" in col:
                 d[idx][col] = val
                 columns.add(col)
             if idx not in index:
@@ -304,11 +310,27 @@ class NifGraph(Graph):
         df = pd.DataFrame(
             index=index,
             columns=list(columns),
-            data = [[d[idx][col] for col in columns] for idx in index]
+            data=[[d[idx][col] for col in columns] for idx in index],
         )
-        df['dcterms:conformsTo'] = [", ".join(dcterms_conformsTo)]*len(df.index)
+        for idx in df.index:
+            for c in collections.keys():
+                if idx in collections[c][NIF.hasContext]:
+                    df.loc[idx, DCTERMS.conformsTo] = collections[c][DCTERMS.conformsTo]
+                    df.loc[idx, NIF.ContextCollection] = c
+        # df['dcterms:conformsTo'] = [", ".join([d[collection][NIF.conformsTo] for collection in d.keys() if idx in d[collection][NIF.hasContext]]) for idx in df.index]
         df = df.reindex(sorted(df.columns), axis=1)
         return df
+
+    def extract_collection(
+        self, collection_uri: URIRef = None, context_uris: list[URIRef] = None
+    ):
+        collection = NifContextCollection(uri=collection_uri)
+        for context_uri in context_uris:
+            nif_context = NifContext(URIScheme=self.URIScheme).load(
+                graph=self, uri=context_uri
+            )
+            collection.add_context(context=nif_context)
+        return collection
 
     # @property
     # def olia_annotations(self):
@@ -356,3 +378,54 @@ class NifGraph(Graph):
     #     df.index = self.natural_sort(df.index)
     #     df.index.name = "index"
     #     return df
+
+    def query_rdf_type(self, rdf_type: URIRef = None):
+        if isinstance(self.store, sparqlstore.SPARQLUpdateStore):
+            q = (
+                """
+            SELECT ?s ?p ?o
+            WHERE {
+                SERVICE <"""
+                + self.store.query_endpoint
+                + """>
+                {
+                    ?s rdf:type """
+                + rdf_type.n3(self.namespace_manager)
+                + """ .
+                    ?s ?p ?o .
+                }
+            }"""
+            )
+        else:
+            q = (
+                """
+            SELECT ?s ?p ?o
+            WHERE {
+                ?s rdf:type """
+                + rdf_type.n3(self.namespace_manager)
+                + """ .
+                ?s ?p ?o .
+            }"""
+            )
+        results = self.query(q)
+
+        d = defaultdict(dict)
+        for result in results:
+            idx = result[0]
+            col = result[1]
+            val = result[2]
+
+            if col == NIF.hasContext:
+                if col in d[idx].keys():
+                    d[idx][col].append(val)
+                else:
+                    d[idx][col] = [val]
+            elif val in OLIA:
+                if col in d[idx].keys():
+                    d[idx][col].append(val)
+                else:
+                    d[idx][col] = [val]
+            else:
+                d[idx][col] = val
+
+        return d
