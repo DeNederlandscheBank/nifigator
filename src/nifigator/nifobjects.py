@@ -390,6 +390,16 @@ class NifContext(NifString):
         )
 
     @property
+    def metadata(self):
+        """
+        Returns the metadata of the context
+        """
+        if self._metadata is not None:
+            return self._metadata
+        else:
+            return None
+
+    @property
     def sourceUrl(self):
         """
         Returns the sourceUrl of the context
