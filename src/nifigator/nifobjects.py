@@ -725,8 +725,8 @@ class NifContext(NifString):
         in_memory_graph = Graph(store="SimpleMemory")
         for s, p, o in results:
             # necessary if data is read from http protocol
-            if isinstance(o, Literal) and o.datatype == XSD.string:
-                o = Literal(o.value.replace("\r\n", "\n"), datatype=XSD.string)
+            if isinstance(o, Literal):
+                o = Literal(o.value.replace("\r\n", "\n"), datatype=o.datatype)
             in_memory_graph.add((s, p, o))
         self.set_in_memory_graph(in_memory_graph)
 
