@@ -25,7 +25,7 @@ Version 0.1.8 (2023-1-30)
 
 * Added join_hyphenated_words to pdfparser
 
-Version 0.1.14 (2023-2-13)
+Version 0.1.15 (2023-2-13)
 ==========================
 
 * Added SPARQL endpoint functionality
