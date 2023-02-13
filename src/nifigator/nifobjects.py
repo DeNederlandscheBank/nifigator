@@ -2,7 +2,7 @@
 
 import logging
 from collections import OrderedDict, defaultdict, deque
-from typing import Union
+from typing import Union, List
 
 import iribaker
 import rdflib
@@ -1183,7 +1183,7 @@ class NifSentence(NifStructure):
         referenceContext: NifContext = None,
         nextSentence: Union[URIRef, str] = None,
         previousSentence: Union[URIRef, str] = None,
-        words: list[Union[NifWord, URIRef]] = None,
+        words: List[Union[NifWord, URIRef]] = None,
     ):
         super().__init__(
             URIScheme=URIScheme,
