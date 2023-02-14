@@ -4,7 +4,7 @@ import logging
 import datetime
 from collections import OrderedDict, deque, namedtuple
 
-from typing import Union
+from typing import Union, List
 
 from lxml import etree
 
@@ -157,7 +157,7 @@ class NafHeaderLayer(NafBase):
 class NafTextLayer(NafBase):
     """ """
 
-    def __init__(self, wordforms: list[WordformElement] = None):
+    def __init__(self, wordforms: List[WordformElement] = None):
         self.set_wordforms(wordforms)
 
     def __str__(self):
@@ -171,7 +171,7 @@ class NafTextLayer(NafBase):
     def wordforms(self):
         return self._wordforms
 
-    def set_wordforms(self, wordforms: list[WordformElement]):
+    def set_wordforms(self, wordforms: List[WordformElement]):
         self._wordforms = wordforms
 
     def write(self, tree: etree._ElementTree = None):
