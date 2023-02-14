@@ -3,7 +3,7 @@
 import logging
 import uuid
 from collections import defaultdict
-from typing import Optional, Union
+from typing import Optional, Union, List
 from zipfile import ZipFile
 import pandas as pd
 
@@ -322,7 +322,7 @@ class NifGraph(Graph):
         return df
 
     def extract_collection(
-        self, collection_uri: URIRef = None, context_uris: list[URIRef] = None
+        self, collection_uri: URIRef = None, context_uris: List[URIRef] = None
     ):
         collection = NifContextCollection(uri=collection_uri)
         for context_uri in context_uris:
