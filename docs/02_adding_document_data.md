@@ -1,7 +1,6 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,md
     text_representation:
       extension: .md
       format_name: markdown
@@ -63,6 +62,12 @@ in Dutch. In the event \n\nof discrepancies between the Dutch version and this E
 translation, the Dutch version prevails. ... '
 ```
 
+
+**_NOTE:_** By default, hyphenated words in the document are joined and the page offsets are corrected accordingly. You can turn of this correction off with by setting join_hyphenated_words = False in the PDFDocument constructor.
+
+**_NOTE:_** By default, a number of control characters are deleted from the text. You can set these control characters in the PDFDocument constructor with the ignore_control_characters parameter (a string), default = "[\x00-\x08\x0b-\x0c\x0e-\x1f].
+
+
 ## Page offsets
 
 In some situations it is necessary to know the specific page number that contains a certain part of the text.
@@ -112,24 +117,102 @@ which gives
 'De Nederlandsche Bank N.V.\n2021 Annual Report\n\nStriking a new balance\n\nPresented to the General Meeting on 16 March 2022.\n\n1\n\nDNB Annual Report 2021'
 ```
 
-By adding the linguistic data we can generate a complete graph:
+
+## Using the tokenizer from the syntok package
+
+
+It is possible to use the tokenizer from the syntok package before you process the text through a Stanza NLP processor in the following way.
+
+```python
+from nifigator import replace_escape_characters, tokenizer
+
+text = replace_escape_characters(context.isString)
+tokenized_text = tokenizer(text)
+
+# correction for bug in stanza
+if tokenized_text != []:
+    if tokenized_text[-1][-1]=="":
+        tokenized_text[-1] = tokenized_text[-1][:-1]
+```
+
+```python
+print(tokenized_text[0][0:3])
+```
+
+which gives:
+
+```console
+[{'text': 'DNB', 'start_char': 0, 'end_char': 3}, {'text': 'Annual', 'start_char': 4, 'end_char': 10}, {'text': 'Report', 'start_char': 11, 'end_char': 17}]
+```
+
+
+Next we make the Stanza pipeline for this pretokenized data
 
 ```python
 import stanza
-nlp = stanza.Pipeline("en", verbose=False)
-stanza_dict = nlp(context.isString).to_dict()
-context.load_from_dict(stanza_dict)
 
+# create a Stanza pipeline for pretokenized data
+nlp = stanza.Pipeline(
+        lang='en', 
+        processors='tokenize, lemma', 
+        tokenize_pretokenized=True,
+        download_method=None,
+        verbose=False
+)
+```
+
+We use the English models for this document. If documents in multiple languages are used then you have to detect the language beforehand from the output of the PDFDocument.
+
+**_NOTE:_** Here we only used the lemma processor. However, you can add more processors, and the output from processors lemma, pos and depparse will be added in the NifContext.
+
+
+Then we process the text through the Stanza pipeline.
+
+```python
+from nifigator import align_stanza_dict_offsets
+
+# extract the text from the tokenized data
+sentences_text = [[word['text'] for word in sentence] for sentence in tokenized_text]
+
+# run the Stanza pipeline and convert the output to a dictionary
+stanza_dict = nlp(sentences_text).to_dict()
+
+# align the stanza output with the tokenized text
+stanza_dict = align_stanza_dict_offsets(stanza_dict, tokenized_text)
+
+# load the output into the context
+context.load_from_dict(stanza_dict)
+```
+
+**_NOTE:_** The Stanza pipeline assumes that between the words there is exactly one space character. In practice multiple spaces and escape characters occur, so that the start_char and the end_char of the Stanza output won't align with the start_char and end_char from the tokenizer output. Therefore we need to correct the start_char and end_char in the Stanza output. This is done with the function align_stanza_dict_offsets. It replaces the start_char and the end_char of every word from the Stanza output by the respective start_char and end_char from the tokenizer.
+
+```python
 from nifigator import NifContextCollection
+
+# create a collection and add the context
 collection = NifContextCollection(uri="https://dnb.nl/rdf-data/")
 collection.add_context(context)
-
-from nifigator import NifGraph
-g = NifGraph(collection=collection)
 ```
 
 and serialize the graph to a file in hext-format:
 
 ```python
-g.serialize("..//data//"+generate_uuid(uri=original_uri)+".hext", format="hext")
+from nifigator import NifGraph
+
+# create a NifGraph from this collection and serialize it 
+g = NifGraph(collection=collection)
+
+g.serialize("..//data//"+generate_uuid(uri=original_uri)+".ttl", format="turtle")
+```
+
+```python
+context.sentences
+```
+
+```python
+
+```
+
+```python
+
 ```

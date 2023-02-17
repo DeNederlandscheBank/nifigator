@@ -7,6 +7,7 @@ from typing import Optional, Union, List
 from zipfile import ZipFile
 import pandas as pd
 
+import rdflib
 from rdflib import Graph
 from rdflib.namespace import DC, DCTERMS, NamespaceManager
 from rdflib.store import Store
@@ -204,7 +205,6 @@ class NifGraph(Graph):
         This property constructs and returns a `nif:ContextCollection`
         from the `NifGraph`.
         """
-
         dict_collections = self.query_rdf_type(NIF.ContextCollection)
         dict_context = self.query_rdf_type(NIF.Context)
         logging.info(".. extracting nif statements")
@@ -218,16 +218,35 @@ class NifGraph(Graph):
             for predicate in dict_collections[collection_uri].keys():
                 if predicate == NIF.hasContext:
                     for context_uri in dict_collections[collection_uri][predicate]:
-                        nif_context = NifContext(URIScheme=self.URIScheme).load(
-                            graph=self, uri=context_uri
+                        if isinstance(
+                            self.store,
+                            rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore,
+                        ):
+                            graph = self.context_graph(uri=context_uri)
+                        else:
+                            graph = self
+
+                        nif_context = NifContext(
+                            URIScheme=self.URIScheme,
+                            uri=context_uri,
+                            graph=graph,
                         )
                         collection.add_context(context=nif_context)
             return collection
         else:
             collection = NifContextCollection(uri=uri)
             for context_uri in dict_context.keys():
-                nif_context = NifContext(URIScheme=self.URIScheme).load(
-                    graph=self, uri=context_uri
+                if isinstance(
+                    self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore
+                ):
+                    graph = self.context_graph(uri=context_uri)
+                else:
+                    graph = self
+
+                nif_context = NifContext(
+                    URIScheme=self.URIScheme,
+                    uri=context_uri,
+                    graph=graph,
                 )
                 collection.add_context(context=nif_context)
             return collection
@@ -317,7 +336,6 @@ class NifGraph(Graph):
                 if idx in collections[c][NIF.hasContext]:
                     df.loc[idx, DCTERMS.conformsTo] = collections[c][DCTERMS.conformsTo]
                     df.loc[idx, NIF.ContextCollection] = c
-        # df['dcterms:conformsTo'] = [", ".join([d[collection][NIF.conformsTo] for collection in d.keys() if idx in d[collection][NIF.hasContext]]) for idx in df.index]
         df = df.reindex(sorted(df.columns), axis=1)
         return df
 
@@ -331,53 +349,6 @@ class NifGraph(Graph):
             )
             collection.add_context(context=nif_context)
         return collection
-
-    # @property
-    # def olia_annotations(self):
-    #     """
-    #     """
-    #     df = self.extract(rdf_type="nif:Word",
-    #                       predicate="nif:oliaLink").reset_index()
-    #     df[1] = True
-    #     df = df.pivot_table(index=['index'],
-    #                         columns=['nif:oliaLink'], values=True, fill_value=0)
-    #     df.index = self.natural_sort(df.index)
-    #     return df
-
-    # def extract(self,
-    #             rdf_type: str=None,
-    #             predicate: str="nif:anchorOf"):
-    #     """
-    #     """
-    #     q = """
-    #     SELECT ?a ?s
-    #     WHERE {
-    #         ?a rdf:type """+rdf_type+""" .
-    #         ?a """+predicate+""" ?s .
-    #     }"""
-    #     qres = self.query(q)
-    #     # construct DataFrame from query results
-    #     index = [
-    #         row[0]
-    #         for row in qres
-    #     ]
-    #     columns = [predicate]
-    #     data = [
-    #         row[1].value
-    #         if isinstance(row[1], rdflib.Literal)
-    #         else row[1].n3(self.namespace_manager)
-    #         for row in qres
-    #     ]
-    #     df = pd.DataFrame(
-    #         index=index,
-    #         columns=columns,
-    #         data=data
-    #     )
-    #     # apply natural sort on indices (because they
-    #     # contain offsets without preceding zeros)
-    #     df.index = self.natural_sort(df.index)
-    #     df.index.name = "index"
-    #     return df
 
     def query_rdf_type(self, rdf_type: URIRef = None):
         if isinstance(self.store, sparqlstore.SPARQLUpdateStore):
@@ -429,3 +400,41 @@ class NifGraph(Graph):
                 d[idx][col] = val
 
         return d
+
+    def context_graph(self, uri: URIRef = None):
+        if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
+            q = (
+                """
+            SELECT ?s ?p ?o
+            WHERE {
+                SERVICE <"""
+                + graph.store.query_endpoint
+                + """>
+                {
+                    ?s nif:referenceContext """
+                + uri.n3(graph.namespace_manager)
+                + """ .
+                    ?s ?p ?o .
+                }
+            }"""
+            )
+        else:
+            q = (
+                """
+            SELECT ?s ?p ?o
+            WHERE {
+                ?s nif:referenceContext """
+                + uri.n3(graph.namespace_manager)
+                + """ .
+                ?s ?p ?o .
+            }"""
+            )
+        results = self.query(q)
+
+        graph = Graph(store="SimpleMemory")
+        for s, p, o in results:
+            # necessary if data is read from http protocol
+            if isinstance(o, Literal) and isinstance(o.value, str):
+                o = Literal(o.value.replace("\r\n", "\n"), datatype=XSD.string)
+            graph.add((s, p, o))
+        return graph
