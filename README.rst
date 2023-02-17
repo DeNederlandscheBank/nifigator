@@ -11,10 +11,6 @@
         :target: https://opensource.org/licenses/MIT
         :alt: License: MIT
 
-.. image:: https://img.shields.io/coveralls/github/DeNederlandscheBank/nifigator/main.svg
-    :alt: Coveralls
-    :target: https://coveralls.io/r/DeNederlandscheBank/nifigator
-    
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
         :target: https://github.com/psf/black
         :alt: Code style: black

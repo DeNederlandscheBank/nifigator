@@ -29,3 +29,8 @@ Version 0.1.15 (2023-2-13)
 ==========================
 
 * Added SPARQL endpoint functionality
+
+Version 0.1.16 (2023-2-17)
+==========================
+
+* Added pipeline description of PDF to NIF

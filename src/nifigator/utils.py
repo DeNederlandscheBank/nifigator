@@ -10,13 +10,102 @@ import unidecode
 from lxml import etree
 from rdflib.namespace import XSD
 from rdflib.term import Literal
+import syntok.segmenter as segmenter
 
 
-def generate_uuid(prefix: str = "nif-", uri: str = None):
+def replace_escape_characters(text: str = None):
+    """
+    Function to replace espace characters by spaces (maintaining exact character locations)
+
+    :param text: the text where escape characters should be replaces
+
+    """
+    escape_characters = [
+        "\a",  # bell
+        "\b",  # back space
+        "\t",  # tab
+        "\n",  # new line
+        "\v",  # vertical tab
+        "\f",  # form feed
+        "\r",  # carriage return
+    ]
+    escape_character_table = {
+        ord(escape_character): " " for escape_character in escape_characters
+    }
+    return text.translate(escape_character_table)
+
+
+def tokenizer(text: str = None):
+    """
+    Function to create list of sentences with list of words
+    with text and start_char and end_char of each word
+
+    :param text: the text to be tokenized
+
+    """
+    sentences = list()
+    for paragraph in segmenter.analyze(text):
+        for sentence in paragraph:
+            words = list()
+            for token in sentence:
+                value = text[token.offset : token.offset + len(token.value)]
+                if value != token.value:
+                    logging.error("Error: incorrect offsets in syntok.segmenter.")
+                else:
+                    words.append(
+                        {
+                            "text": token.value,
+                            "start_char": token.offset,
+                            "end_char": token.offset + len(token.value),
+                        }
+                    )
+            sentences.append(words)
+    return sentences
+
+
+def align_stanza_dict_offsets(stanza_dict: list = None, sentences: list = None):
+    """
+    Function to align the stanza dict offsets with the offsets from the tokenizer
+
+    :param stanza_dict: the output dict from the Stanza pipeline
+
+    :param sentences: the output of the tokenizer
+
+    """
+    # check alignment of stanza_dict and tokenized_document
+    assert len(stanza_dict) == len(sentences)
+    for sent_idx, sent in enumerate(stanza_dict):
+        assert len(stanza_dict[sent_idx]) == len(sentences[sent_idx])
+
+    # correct stanza_dict start_char and end_char
+    for sent_idx, sent in enumerate(stanza_dict):
+        for word_idx, word in enumerate(sent):
+            word["start_char"] = sentences[sent_idx][word_idx]["start_char"]
+            word["end_char"] = sentences[sent_idx][word_idx]["end_char"]
+
+    return stanza_dict
+
+
+def generate_uuid(uri: str = None, prefix: str = "nif-"):
+    """
+    Function to generate the uuid for nif
+
+    :param uri: the uri from which the uuid should be generated
+
+    :param prefix: the prefix of the uuid, default = "nif-"
+
+    """
     return prefix + uuid.uuid3(uuid.NAMESPACE_DNS, uri).hex
 
 
-def natural_sort(elements):
+def natural_sort(elements: list = None):
+    """
+    Function to sort a list of strings with numbers
+
+    :param elements: the list to be sorted
+
+    """
+
     def convert_to_int(text):
         return int(text) if text.isdigit() else text.lower()
 
@@ -26,7 +115,15 @@ def natural_sort(elements):
     return sorted(elements, key=alphanum_key)
 
 
-def delete_accents(s: str = None, lang: str = "en"):
+def delete_accents(text: str = None, lang: str = "en"):
+    """
+    Function to delete accents from a string
+
+    :param text: the string from which the accents should be deleted
+
+    :param lang: the language of the text in the string
+
+    """
     if lang == Literal("grc", datatype=XSD.string):
         replacements = {
             "ἒ": "ἐ",
@@ -96,13 +193,21 @@ def delete_accents(s: str = None, lang: str = "en"):
             "ῴ": "ῳ",
         }
         for replacement in replacements.keys():
-            s = s.replace(replacement, replacements[replacement])
+            text = text.replace(replacement, replacements[replacement])
     else:
-        s = unidecode.unidecode(s)
-    return s
+        text = unidecode.unidecode(text)
+    return text
 
 
-def delete_diacritics(s: str = None, lang: str = "en"):
+def delete_diacritics(text: str = None, lang: str = "en"):
+    """
+    Function to delete diacritics from a string
+
+    :param text: the string from which the diacritics should be deleted
+
+    :param lang: the language of the text in the string
+
+    """
     if lang == Literal("grc", datatype=XSD.string):
         replacements = {
             "Ά": "Α",
@@ -341,18 +446,17 @@ def delete_diacritics(s: str = None, lang: str = "en"):
             "ꭥ": "Ω",
         }
         for replacement in replacements.keys():
-            s = s.replace(replacement, replacements[replacement])
+            text = text.replace(replacement, replacements[replacement])
     else:
-        s = unidecode.unidecode(s)
-    return s
+        text = unidecode.unidecode(text)
+    return text
 
 
 def time_in_correct_format(datetime_obj: datetime.datetime) -> str:
     """
     Function that returns the current time (UTC)
 
-    Args:
-        datetime_obj: the input to be converted
+    :param datetime_obj: the input to be converted
 
     Returns:
         str: the time in correct format
@@ -364,8 +468,7 @@ def time_in_correct_format(datetime_obj: datetime.datetime) -> str:
 def load_dtd(dtd_url: str) -> etree.DTD:
     """Utility function to load the dtd
 
-    Args:
-        dtd_url: the location of the dtd file
+    :param dtd_url: the location of the dtd file
 
     Returns:
         etree.DTD: the dtd object to be used for validation
@@ -387,8 +490,7 @@ def prepare_comment_text(text: str) -> str:
     """
     Function to prepare comment text for xml
 
-    Args:
-        text: comment to be converted to xml comment
+    :param text: comment to be converted to xml comment
 
     Returns:
         str: converted comment text

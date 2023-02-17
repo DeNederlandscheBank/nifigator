@@ -141,3 +141,7 @@ for triple in g_annotations.triples([None, RDF.type, None]):
 (rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#OffsetBasedString'))
 (rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#String'))
 ```
+
+```python
+
+```
