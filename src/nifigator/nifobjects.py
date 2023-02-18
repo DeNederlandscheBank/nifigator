@@ -208,17 +208,31 @@ class NifString(NifBase):
         """
         if uri is not None:
             if not isinstance(uri, URIRef):
+                if isinstance(self, NifContext):
+                    obj_str = "&nif=context"
+                elif isinstance(self, NifContextCollection):
+                    obj_str = "&nif=collection"
+                elif isinstance(self, NifPage):
+                    obj_str = "&nif=page"
+                elif isinstance(self, NifParagraph):
+                    obj_str = "&nif=paragraph"
+                elif isinstance(self, NifSentence):
+                    obj_str = "&nif=sentence"
+                elif isinstance(self, NifPhrase):
+                    obj_str = "&nif=phrase"
+                elif isinstance(self, NifWord):
+                    obj_str = "&nif=word"
                 if not isinstance(self, NifContext):
-                    uri_format = OffsetBasedString
-                    if uri_format == OffsetBasedString:
+                    if self.URIScheme == OffsetBasedString:
                         uri = (
                             uri
-                            + "#offset_"
+                            + obj_str
+                            + "_"
                             + str(self.beginIndex)
                             + "_"
                             + str(self.endIndex)
                         )
-                    elif uri_format == RFC5147String:
+                    elif self.URIScheme == RFC5147String:
                         uri = (
                             uri
                             + "#char="

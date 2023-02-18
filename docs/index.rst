@@ -10,11 +10,11 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   Overview <readme>
+   Installation <readme>
    Short overview <01_short_overview>
-   Adding document data <02_adding_document_data>
+   PDF documents pipeline <02_adding_document_data>
    Adding annotations <03_adding_annotations>
-   Using a SPARQL endpoint and running SPARQL queries <04_using a SPARQL endpoint>
+   Using a SPARQL endpoint <04_using a SPARQL endpoint>
    Contributions & Help <contributing>
    License <license>
    Authors <authors>

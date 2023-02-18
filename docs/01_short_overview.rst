@@ -64,7 +64,7 @@ This gives:
 
 .. code-block:: none
 
-        (nif:Sentence) uri = https://mangosaurus.eu/rdf-data/doc_1#offset_0_23
+        (nif:Sentence) uri = https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23
           referenceContext : https://mangosaurus.eu/rdf-data/doc_1
           beginIndex : 0
           endIndex : 23
@@ -85,7 +85,7 @@ This results in:
 
 .. code-block:: none
 
-        (nif:Word) uri = https://mangosaurus.eu/rdf-data/doc_1#offset_24_29
+        (nif:Word) uri = https://mangosaurus.eu/rdf-data/doc_1&nif=word_24_29
           referenceContext : https://mangosaurus.eu/rdf-data/doc_1
           beginIndex : 24
           endIndex : 29
@@ -93,7 +93,7 @@ This results in:
           lemma : "Felix"
           pos : olia:ProperNoun
           morphofeats : olia:Singular
-          dependency : https://mangosaurus.eu/rdf-data/doc_1#offset_42_43
+          dependency : https://mangosaurus.eu/rdf-data/doc_1&nif=word_42_43
           dependencyRelationtype : nsubj
 
 .. note::
@@ -179,14 +179,14 @@ This gives the Nif data in RDF/turtle format:
       nif:hasContext <https://mangosaurus.eu/rdf-data/doc_1> ;
       dcterms:conformsTo <http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/2.1> .
   
-  <https://mangosaurus.eu/rdf-data/doc_1#offset_15_18> a nif:OffsetBasedString,
+  <https://mangosaurus.eu/rdf-data/doc_1&nif=word_15_18> a nif:OffsetBasedString,
           nif:String,
           nif:Word ;
       nif:anchorOf "the"^^xsd:string ;
       nif:anchorOf_no_accents "the"^^xsd:string ;
       nif:anchorOf_no_diacritics "the"^^xsd:string ;
       nif:beginIndex "15"^^xsd:nonNegativeInteger ;
-      nif:dependency <https://mangosaurus.eu/rdf-data/doc_1#offset_22_23> ;
+      nif:dependency <https://mangosaurus.eu/rdf-data/doc_1&nif=word_22_23> ;
       nif:dependencyRelationType "det"^^xsd:string ;
       nif:endIndex "18"^^xsd:nonNegativeInteger ;
       nif:lemma "the"^^xsd:string ;
@@ -194,23 +194,23 @@ This gives the Nif data in RDF/turtle format:
           olia:Definite ;
       nif:pos olia:Determiner ;
       nif:referenceContext <https://mangosaurus.eu/rdf-data/doc_1> ;
-      nif:sentence <https://mangosaurus.eu/rdf-data/doc_1#offset_0_23> .
+      nif:sentence <https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23> .
 
-  <https://mangosaurus.eu/rdf-data/doc_1#offset_19_22> a nif:OffsetBasedString,
+  <https://mangosaurus.eu/rdf-data/doc_1&nif=word_19_22> a nif:OffsetBasedString,
           nif:String,
           nif:Word ;
       nif:anchorOf "mat"^^xsd:string ;
       nif:anchorOf_no_accents "mat"^^xsd:string ;
       nif:anchorOf_no_diacritics "mat"^^xsd:string ;
       nif:beginIndex "19"^^xsd:nonNegativeInteger ;
-      nif:dependency <https://mangosaurus.eu/rdf-data/doc_1#offset_12_14> ;
+      nif:dependency <https://mangosaurus.eu/rdf-data/doc_1&nif=word_12_14> ;
       nif:dependencyRelationType "obl"^^xsd:string ;
       nif:endIndex "22"^^xsd:nonNegativeInteger ;
       nif:lemma "mat"^^xsd:string ;
       nif:oliaLink olia:Singular ;
       nif:pos olia:CommonNoun ;
       nif:referenceContext <https://mangosaurus.eu/rdf-data/doc_1> ;
-      nif:sentence <https://mangosaurus.eu/rdf-data/doc_1#offset_0_23> .
+      nif:sentence <https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23> .
 
 You can also parse the serialized data from this graph into another :class:`~nifigator.nifgraph.NifGraph` and check whether they are isomorphic (meaning that they contain the same triples excepts from the blank nodes).
 
@@ -261,9 +261,9 @@ Which returns:
 
 .. code-block:: none
 
-        (nif:Word) uri = https://mangosaurus.eu/rdf-data/doc_1#offset_0_3
+        (nif:Word) uri = https://mangosaurus.eu/rdf-data/doc_1&nif=word_0_3
           referenceContext : https://mangosaurus.eu/rdf-data/doc_1
-          nifsentence : https://mangosaurus.eu/rdf-data/doc_1#offset_0_23
+          nifsentence : https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23
           beginIndex : 0
           endIndex : 3
           anchorOf : "The"

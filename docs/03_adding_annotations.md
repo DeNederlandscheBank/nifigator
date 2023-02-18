@@ -71,7 +71,7 @@ print(context.phrases)
 ```
 
 ```console
-[(nif:EntityOccurrence) uri = <https://mangosaurus.eu/rdf-data/doc_1#offset_24_29>
+[(nif:EntityOccurrence) uri = <https://mangosaurus.eu/rdf-data/doc_1&nif=phrase_24_29>
   referenceContext : https://mangosaurus.eu/rdf-data/doc_1
   beginIndex : 24
   endIndex : 29
@@ -97,7 +97,7 @@ g.collection.contexts[0].phrases
 ```
 
 ```console
-[(nif:TermOccurrence) uri = <https://mangosaurus.eu/rdf-data/doc_1#offset_24_29>
+[(nif:TermOccurrence) uri = <https://mangosaurus.eu/rdf-data/doc_1&nif=phrase_24_29>
    referenceContext : https://mangosaurus.eu/rdf-data/doc_1
    beginIndex : 24
    endIndex : 29
@@ -136,10 +136,10 @@ for triple in g_annotations.triples([None, RDF.type, None]):
 ```
 
 ```console
-(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#Phrase'))
-(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#EntityOccurrence'))
-(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#OffsetBasedString'))
-(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#String'))
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1&nif=phrase_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#Phrase'))
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1&nif=phrase_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#EntityOccurrence'))
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1&nif=phrase_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#OffsetBasedString'))
+(rdflib.term.URIRef('https://mangosaurus.eu/rdf-data/doc_1&nif=phrase_24_29'), rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), rdflib.term.URIRef('http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#String'))
 ```
 
 ```python
