@@ -45,14 +45,14 @@ def test_load_from_dict():
     assert context.sentences[1].anchorOf == "Felix was his name."
 
     word = context.sentences[1].words[0]
-    assert word.uri == URIRef("https://mangosaurus.eu/rdf-data/doc_1#offset_24_29")
+    assert word.uri == URIRef("https://mangosaurus.eu/rdf-data/doc_1&nif=word_24_29")
     assert str(word.referenceContext) == str(context)
     assert word.beginIndex == 24
     assert word.endIndex == 29
     assert word.anchorOf == "Felix"
     assert word.lemma == "Felix"
     assert word.morphofeats == [URIRef('http://purl.org/olia/olia.owl#Singular')]
-    assert word.dependency[0].uri == URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_38_42')
+    assert word.dependency[0].uri == URIRef('https://mangosaurus.eu/rdf-data/doc_1&nif=word_38_42')
     assert word.dependencyRelationType == 'nsubj'
 
 def test_nif_graph():
@@ -81,12 +81,12 @@ def test_nif_graph():
     assert context.sentences[1].anchorOf == "Felix was his name."
     
     word = context.sentences[1].words[0]
-    assert word.uri == URIRef("https://mangosaurus.eu/rdf-data/doc_1#offset_24_29")
+    assert word.uri == URIRef("https://mangosaurus.eu/rdf-data/doc_1&nif=word_24_29")
     assert str(word.referenceContext) == str(context)
     assert word.beginIndex == 24
     assert word.endIndex == 29
     assert word.anchorOf == "Felix"
     assert word.lemma == "Felix"
     assert word.morphofeats == [URIRef('http://purl.org/olia/olia.owl#Singular')]
-    assert word.dependency[0].uri == URIRef('https://mangosaurus.eu/rdf-data/doc_1#offset_38_42')
+    assert word.dependency[0].uri == URIRef('https://mangosaurus.eu/rdf-data/doc_1&nif=word_38_42')
     assert word.dependencyRelationType == 'nsubj'

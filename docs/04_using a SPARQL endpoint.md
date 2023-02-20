@@ -13,7 +13,7 @@ jupyter:
 ---
 
 
-# Using a SPARQL endpoint and running SPARQL queries
+# Using a SPARQL endpoint
 
 
 ## Connecting to a (local) SPARQL endpoint
@@ -61,9 +61,8 @@ catalog = graph.catalog
 catalog
 ```
 
-```console
 
-```
+## Running SPARQL queries
 
 
 ### The total number of words in the collection
