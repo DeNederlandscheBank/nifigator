@@ -754,9 +754,10 @@ class NifContext(NifString):
                     URIScheme=self.URIScheme,
                     uri=page_uri,
                     referenceContext=self,
+                    pageNumber=idx+1,
                     graph=self.graph,
                 )
-                for page_uri in page_uris
+                for idx, page_uri in enumerate(page_uris)
             ]
         )
         # extract paragraphs from graph
@@ -1425,6 +1426,8 @@ class NifPage(NifStructure):
 
     :param endIndex: the end index in the context string
 
+    :param pageNumber: the page number of the object
+
     :param referenceContext: the context to which the string refers
 
     """
@@ -1435,6 +1438,7 @@ class NifPage(NifStructure):
         uri: Union[URIRef, str] = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
+        pageNumber: int = None,
         referenceContext: NifContext = None,
         graph: Graph = None,
     ):
@@ -1446,6 +1450,7 @@ class NifPage(NifStructure):
             referenceContext=referenceContext,
             graph=graph,
         )
+        self.set_pageNumber(pageNumber)
 
     def __str__(self):
         return self.__repr__()
@@ -1461,7 +1466,22 @@ class NifPage(NifStructure):
                 s += f'  anchorOf : {repr(self.anchorOf[0:1000]+"... ")}\n'
             else:
                 s += f"  anchorOf : {repr(self.anchorOf)}\n"
+        if self.pageNumber is not None and self.pageNumber != 0:
+            s += f"  pageNumber : {self.pageNumber}\n"
         return s
+
+    def set_pageNumber(self, pageNumber: int = None):
+        if pageNumber is not None and pageNumber != 0:
+            self._pageNumber = Literal(pageNumber, datatype=XSD.nonNegativeInteger)
+        else:
+            self._pageNumber = None
+
+    @property
+    def pageNumber(self):
+        if self._pageNumber is not None:
+            return self._pageNumber.value
+        else:
+            return None
 
     def triples(self):
         """
@@ -1469,6 +1489,7 @@ class NifPage(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Page)
+            yield (self.uri, NIF.pageNumber, self._pageNumber)
             for triple in super().triples():
                 yield triple
 
