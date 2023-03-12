@@ -1619,7 +1619,7 @@ class NifWord(NifStructure):
                 return self._lemma
         elif self.graph is not None:
             for item in self.graph.objects(subject=self.uri, predicate=NIF.lemma):
-                if isinstance(self._lemma, Literal):
+                if isinstance(item, Literal):
                     return item.value
                 else:
                     return item
