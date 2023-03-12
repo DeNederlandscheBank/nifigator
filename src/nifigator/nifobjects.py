@@ -223,6 +223,7 @@ class NifString(NifBase):
                 elif isinstance(self, NifWord):
                     obj_str = "&nif=word"
                 if not isinstance(self, NifContext):
+                    uri = uri.replace("&nif=context", "")
                     if self.URIScheme == OffsetBasedString:
                         uri = (
                             uri
@@ -337,6 +338,7 @@ class NifContext(NifString):
         predLang: URIRef = None,
         isString: Union[Literal, str] = None,
         metadata: dict = None,
+        lexicon: URIRef = None,
         graph: Graph = None,
     ):
         super().__init__(
@@ -355,6 +357,7 @@ class NifContext(NifString):
         self.set_predLang(predLang)
         self.set_isString(isString)
         self.set_metadata(metadata)
+        self.set_lexicon(lexicon)
 
     def __str__(self):
         return self.__repr__()
@@ -428,7 +431,10 @@ class NifContext(NifString):
             return self._predLang
         elif self.graph is not None:
             for item in self.graph.objects(subject=self.uri, predicate=NIF.predLang):
-                return item.value
+                if isinstance(item, Literal):
+                    return item.value
+                else:
+                    return item
         else:
             return None
 
@@ -565,6 +571,23 @@ class NifContext(NifString):
         else:
             return None
 
+    @property
+    def lexicon(self):
+        """
+        Returns the lexicon
+        """
+        return self._lexicon
+
+
+    def set_lexicon(self, lexicon: URIRef = None):
+        """
+        Sets the lexicon base uri for lemmas
+        """
+        if lexicon is not None:
+            self._lexicon = lexicon
+        else:
+            self._lexicon = None
+
     def set_metadata(self, metadata: dict = None):
         """
         Sets the metadata of the context (a dict of predicates and objects)
@@ -605,7 +628,7 @@ class NifContext(NifString):
         """
         Sets the pages of the context (a list of NifPage)
         """
-        if pages is not None:
+        if pages is not None and pages != []:
             self._pages = deque(pages)
         else:
             self._pages = None
@@ -614,7 +637,7 @@ class NifContext(NifString):
         """
         Sets the paragraphs of the context (a list of NifParagraph)
         """
-        if paragraphs is not None:
+        if paragraphs is not None and paragraphs != []:
             self._paragraphs = deque(paragraphs)
         else:
             self._paragraphs = None
@@ -623,7 +646,7 @@ class NifContext(NifString):
         """
         Sets the phrases of the context (a list of NifPhrases)
         """
-        if phrases is not None:
+        if phrases is not None and phrases != []:
             self._phrases = deque(phrases)
         else:
             self._phrases = None
@@ -632,7 +655,7 @@ class NifContext(NifString):
         """
         Sets the sentences of the context (a list of NifSentence)
         """
-        if sentences is not None:
+        if sentences is not None and sentences != []:
             self._sentences = deque(sentences)
         else:
             self._sentences = None
@@ -884,7 +907,7 @@ class NifContext(NifString):
                         sentence.set_nextSentence(sentences[sent_idx + 1])
                     if sent_idx > 0:
                         sentence.set_previousSentence(sentences[sent_idx - 1])
-
+        
 
 class NifStructure(NifString):
     """
@@ -1496,7 +1519,7 @@ class NifWord(NifStructure):
         endIndex: Union[Literal, int] = None,
         referenceContext: NifContext = None,
         nifsentence: NifSentence = None,
-        lemma: str = None,
+        lemma: Union[URIRef, str] = None,
         pos: list = None,
         morphofeats: list = None,
         dependency: list = None,
@@ -1569,10 +1592,16 @@ class NifWord(NifStructure):
         Returns the lemma of the word
         """
         if self._lemma is not None:
-            return self._lemma.value
+            if isinstance(self._lemma, Literal):
+                return self._lemma.value
+            else:
+                return self._lemma
         elif self.graph is not None:
             for item in self.graph.objects(subject=self.uri, predicate=NIF.lemma):
-                return item.value
+                if isinstance(self._lemma, Literal):
+                    return item.value
+                else:
+                    return item
         else:
             return None
 
@@ -1663,12 +1692,16 @@ class NifWord(NifStructure):
         """
         self._nifsentence = nifsentence
 
-    def set_lemma(self, lemma: str = None):
+    def set_lemma(self, lemma: Union[URIRef, str] = None):
         """
         Sets the lemma of the word (a string)
         """
         if lemma is not None and lemma != "":
-            self._lemma = Literal(lemma, datatype=XSD.string)
+            if isinstance(lemma, URIRef):
+                self._lemma = lemma
+            else:
+                self._lemma = Literal(lemma, datatype=XSD.string)
+
         else:
             self._lemma = None
 
@@ -1763,7 +1796,13 @@ class NifWord(NifStructure):
                 yield triple
             yield (self.uri, NIF.anchorOf, Literal(self.anchorOf, datatype=XSD.string))
             if self.lemma is not None:
-                yield (self.uri, NIF.lemma, self._lemma)
+                if self.referenceContext.lexicon is not None:
+                    # prevent that uribaker converts this to underscore
+                    lemma = self._lemma.replace('"', "%22")
+                    lemma_uri = URIRef(iribaker.to_iri(str(self.referenceContext.lexicon)+lemma))
+                    yield (self.uri, NIF.lemma, lemma_uri)
+                else:
+                    yield (self.uri, NIF.lemma, self._lemma)
             if self.pos is not None and self._pos != []:
                 for pos in self._pos:
                     yield (self.uri, NIF.pos, pos)

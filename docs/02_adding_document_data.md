@@ -5,7 +5,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.14.4
+      jupytext_version: 1.14.5
   kernelspec:
     display_name: Python 3 (ipykernel)
     language: python
@@ -131,7 +131,7 @@ tokenized_text = tokenizer(text)
 
 # correction for bug in stanza
 if tokenized_text != []:
-    if tokenized_text[-1][-1]=="":
+    if tokenized_text[-1][-1]['text']=="":
         tokenized_text[-1] = tokenized_text[-1][:-1]
 ```
 
@@ -154,16 +154,16 @@ import stanza
 # create a Stanza pipeline for pretokenized data
 nlp = stanza.Pipeline(
         lang='en', 
-        processors='tokenize, lemma', 
+        processors='tokenize, lemma, pos, depparse', 
         tokenize_pretokenized=True,
         download_method=None,
         verbose=False
 )
 ```
 
-We use the English models for this document. If documents in multiple languages are used then you have to detect the language beforehand from the output of the PDFDocument.
+We use the English models for this document. If documents in multiple languages are used then you need to detect the language beforehand from the output of the PDFDocument.
 
-**_NOTE:_** Here we only used the lemma processor. However, you can add more processors, and the output from processors lemma, pos and depparse will be added in the NifContext.
+**_NOTE:_** Here we used the lemma, pos and depparse processor. However, you can select the processors you will need; the output from processors lemma, pos and depparse will be added to the NifContext.
 
 
 Then we process the text through the Stanza pipeline.
@@ -184,7 +184,35 @@ stanza_dict = align_stanza_dict_offsets(stanza_dict, tokenized_text)
 context.load_from_dict(stanza_dict)
 ```
 
-**_NOTE:_** The Stanza pipeline assumes that between the words there is exactly one space character. In practice multiple spaces and escape characters occur, so that the start_char and the end_char of the Stanza output won't align with the start_char and end_char from the tokenizer output. Therefore we need to correct the start_char and end_char in the Stanza output. This is done with the function align_stanza_dict_offsets. It replaces the start_char and the end_char of every word from the Stanza output by the respective start_char and end_char from the tokenizer.
+**_NOTE:_** The Stanza pipeline assumes that between the words there is exactly one space character. In practice multiple spaces and escape characters occur, so that the start_char and the end_char of the Stanza output won't align with the start_char and end_char from the tokenizer output. Therefore we need to correct the start_char and end_char in the Stanza output to the original values. This is done with the function align_stanza_dict_offsets. It replaces the start_char and the end_char of every word from the Stanza output by the respective start_char and end_char from the tokenizer.
+
+
+Metadata can be added to the context by providing a dict with DC and DCTERMS items, for example:
+
+```python
+from rdflib import DC, DCTERMS, URIRef, Literal
+
+context.set_metadata({DC.source: URIRef(original_uri),
+                      DC.coverage: Literal(2021)})
+```
+
+Metadata can be retrieved with:
+
+```python
+context.metadata
+```
+
+which gives:
+
+```console
+{rdflib.term.URIRef('http://purl.org/dc/elements/1.1/source'): 
+    rdflib.term.URIRef('https://www.dnb.nl/media/4kobi4vf/dnb-annual-report-2021.pdf'),
+ rdflib.term.URIRef('http://purl.org/dc/elements/1.1/coverage'): 
+    rdflib.term.Literal('2021', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer'))}
+```
+
+
+To store the context add it to a collection
 
 ```python
 from nifigator import NifContextCollection
@@ -194,7 +222,7 @@ collection = NifContextCollection(uri="https://dnb.nl/rdf-data/")
 collection.add_context(context)
 ```
 
-and serialize the graph to a file in hext-format:
+and serialize the graph to a file in turtle-format:
 
 ```python
 from nifigator import NifGraph
@@ -203,8 +231,4 @@ from nifigator import NifGraph
 g = NifGraph(collection=collection)
 
 g.serialize("..//data//"+generate_uuid(uri=original_uri)+".ttl", format="turtle")
-```
-
-```python
-
 ```
