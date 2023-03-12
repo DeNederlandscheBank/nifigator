@@ -34,3 +34,9 @@ Version 0.1.16 (2023-2-17)
 ==========================
 
 * Added pipeline description of PDF to NIF
+
+Version 0.1.17 (2023-3-12)
+==========================
+
+* Added page number to NIF
+* Added lexicon for NIF:lemma

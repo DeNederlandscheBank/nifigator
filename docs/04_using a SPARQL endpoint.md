@@ -61,6 +61,12 @@ catalog = graph.catalog
 catalog
 ```
 
+It is sometimes necessary to compact the database. You can do that with the following command
+
+```console
+curl -XPOST http://localhost:3030/$/compact/nifigator
+```
+
 
 ## Running SPARQL queries
 
@@ -209,8 +215,4 @@ This gives:
 ('relevant', 'insurers')
 ('non-life', 'insurers')
 ('individual', 'insurers')
-```
-
-```python
-
 ```
