@@ -64,9 +64,6 @@ lexicon
   entry : ...
 ```
 
-```python
-lexicon.entries[87]
-```
 
 From this a lexicon graph can be made.
 
