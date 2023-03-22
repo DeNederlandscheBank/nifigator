@@ -16,6 +16,8 @@ jupyter:
 # Using Ontolex-Lemon with NIF data
 
 
+Nifigator includes functionality to work with Ontolex-Lemon.
+
 We will show how to create a lexicon from NIF data and how to use an existing Ontolex-Lemon termbase to search in NIF data.
 
 
@@ -39,92 +41,39 @@ nif_graph = NifGraph().parse(
 Then we create a lexicon from NIF data. First we extract all words with lemma and part to speech tags.
 
 ```python
-# query for all anchorOfs of all word with optional lemma
-
-q = """
-SELECT ?anchor ?lemma ?pos
-WHERE {
-    ?w rdf:type nif:Word .
-    ?w nif:anchorOf ?anchor .
-    OPTIONAL {?w nif:lemma ?lemma . } .
-    OPTIONAL {?w nif:pos ?pos . } .
-}
-"""
-# execute the query
-results = list(nif_graph.query(q))
+lexicon = nif_graph.lexicon
 ```
 
 ```python
-def noNumber(s: str=""):
-    return not s.replace('.', '', 1).replace(',', '', 1).isdigit()
+lexicon
 ```
 
-Then we loop over the results and create LexicalEntries based on the word data.
-
-```python
-from termate import Lexicon, LexicalEntry, Form
-from rdflib.term import URIRef
-from iribaker import to_iri
-
-# create new lexicon with English language
-lexicon_uri = URIRef("https://mangosaurus.eu/rdf-data/lexicon/en")
-lexicon = Lexicon(uri=lexicon_uri)
-lexicon.set_language("en")
-
-for anchorOf, lemma, pos in results:
-
-    if lemma is not None and noNumber(lemma):
-        
-        # derivee lexical entry uri from the lemma
-        if not isinstance(lemma, URIRef):
-            entry_uri = to_iri(str(lexicon.uri)+"/"+lemma)
-        else:
-            entry_uri = lemma
-
-        # create the lexical entry
-        entry = LexicalEntry(
-            uri=entry_uri,
-            language=lexicon.language
-        )
-
-        # set canonicalForm (this is the lemma)
-        entry.set_canonicalForm(
-            Form(
-                uri=URIRef(entry_uri),
-                formVariant="canonicalForm",
-                writtenReps=[lemma])
-            )
-
-        # set otherForm if the anchorOf is not the same as the lemma
-        if anchorOf.value != lemma.value:
-            entry.set_otherForms([
-                Form(
-                    uri=URIRef(entry_uri),
-                    formVariant="otherForm",
-                    writtenReps=[anchorOf]
-                )])
-
-        # set part of speech if it exists
-        if pos is not None:
-            entry.set_partOfSpeechs([pos])
-
-        lexicon.add_entry(entry)
+```console
+(ontolex:Lexicon) uri = <https://mangosaurus.eu/rdf-data/lexicon/en>
+  language : en
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/DNB>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/in>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/the>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/of>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/money>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/,>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/and>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/other>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/financial>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/for>
+  entry : ...
 ```
 
-Next we create a lexicon graph from the lexicon object by collecting the triples.
+```python
+lexicon.entries[87]
+```
+
+From this a lexicon graph can be made.
 
 ```python
-from rdflib import Graph, Namespace, namespace
+from nifigator import LemonGraph
 
-lexicon_graph = Graph()
-lexicon_graph.bind("tbx", Namespace("http://tbx2rdf.lider-project.eu/tbx#"))
-lexicon_graph.bind("ontolex", Namespace("http://www.w3.org/ns/lemon/ontolex#"))
-lexicon_graph.bind("lexinfo", Namespace("http://www.lexinfo.net/ontology/3.0/lexinfo#"))
-lexicon_graph.bind("decomp", Namespace("http://www.w3.org/ns/lemon/decomp#"))
-lexicon_graph.bind("skos", namespace.SKOS)
-
-for triple in list(lexicon.triples()):
-    lexicon_graph.add(triple)
+lexicon_graph = LemonGraph(lexicon=lexicon)
 ```
 
 ```python

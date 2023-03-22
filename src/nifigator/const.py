@@ -6,6 +6,7 @@
 from collections import namedtuple
 from rdflib.namespace import Namespace
 from rdflib.term import URIRef
+import rdflib
 
 OffsetBasedString = URIRef(
     "http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#OffsetBasedString"
@@ -21,6 +22,19 @@ NIF = Namespace("http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#
 NIF_ONTOLOGY = "http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/2.1"
 OLIA = Namespace("http://purl.org/olia/olia.owl#")
 ITSRDF = Namespace("http://www.w3.org/2005/11/its/rdf#")
+
+RDF = rdflib.namespace.RDF
+RDFS = rdflib.namespace.RDFS
+DCAT = rdflib.namespace.DCAT
+DC = rdflib.namespace.DC
+DCT = rdflib.namespace.DCTERMS
+SKOS = rdflib.namespace.SKOS
+XSD = rdflib.namespace.XSD
+TBX = Namespace("http://tbx2rdf.lider-project.eu/tbx#")
+ONTOLEX = Namespace("http://www.w3.org/ns/lemon/ontolex#")
+LEXINFO = Namespace("http://www.lexinfo.net/ontology/3.0/lexinfo#")
+DECOMP = Namespace("http://www.w3.org/ns/lemon/decomp#")
+
 
 # Tense
 # VerbForm
