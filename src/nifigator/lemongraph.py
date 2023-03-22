@@ -98,7 +98,9 @@ class LemonGraph(Graph):
         if file is not None:
             self.__parse_file(file=file)
         elif lexicon is not None:
-            self.__parse_lexicon(lexicon=lexicon)
+            if isinstance(lexicon, dict):
+                for l in lexicon.values():
+                    self.__parse_lexicon(lexicon=l)
         return self
 
     def __parse_lexicon(self, lexicon: Lexicon = None):

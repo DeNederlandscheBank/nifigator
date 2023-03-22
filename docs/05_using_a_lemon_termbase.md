@@ -44,8 +44,10 @@ Then we create a lexicon from NIF data. First we extract all words with lemma an
 lexicon = nif_graph.lexicon
 ```
 
+The lexicon now contains a lexicon for all languages uased in the NIF data. In our case we only have an English lexicon.
+
 ```python
-lexicon
+lexicon['en']
 ```
 
 ```console

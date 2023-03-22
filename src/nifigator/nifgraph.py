@@ -450,7 +450,7 @@ class NifGraph(Graph):
         if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
             q = (
                 """
-                SELECT ?anchor ?lemma ?pos
+                SELECT ?anchor ?lemma ?pos ?lang
                 WHERE {
                     SERVICE <"""
                     + graph.store.query_endpoint
@@ -458,45 +458,56 @@ class NifGraph(Graph):
                     {
                         ?w rdf:type nif:Word .
                         ?w nif:anchorOf ?anchor .
+                        ?w nif:referenceContext ?context .
                         OPTIONAL {?w nif:lemma ?lemma . } .
                         OPTIONAL {?w nif:pos ?pos . } .
+                        OPTIONAL {?context dc:language ?lang }
                     }
                 }"""
             )
         else:
             q = (
                 """
-                SELECT ?anchor ?lemma ?pos
+                SELECT ?anchor ?lemma ?pos ?lang
                 WHERE {
                     ?w rdf:type nif:Word .
                     ?w nif:anchorOf ?anchor .
+                    ?w nif:referenceContext ?context .
                     OPTIONAL {?w nif:lemma ?lemma . } .
                     OPTIONAL {?w nif:pos ?pos . } .
+                    OPTIONAL {?context dc:language ?lang }
                 }
             """
             )
         # execute the query
         results = self.query(q)
 
-        # create new lexicon with English language
-        lexicon_uri = URIRef("https://mangosaurus.eu/rdf-data/lexicon/en")
-        lexicon = Lexicon(uri=lexicon_uri)
-        lexicon.set_language("en")
+        lexica = dict()
 
-        for anchorOf, lemma, pos in results:
+        for anchorOf, lemma, pos, lang in results:
 
             if lemma is not None and noNumber(lemma):
+
+                # default language is "en"
+                if lang is None:
+                    lang = "en"
+
+                # construct lexicon if necessary
+                if lang not in lexica.keys():
+                    lexica[lang] = Lexicon(uri=URIRef(DEFAULT_URI+"lexicon/"+lang)) 
+                    lexica[lang].set_language(lang)
+
                 
-                # derivee lexical entry uri from the lemma
+                # derive lexical entry uri from the lemma
                 if not isinstance(lemma, URIRef):
-                    entry_uri = to_iri(str(lexicon.uri)+"/"+lemma)
+                    entry_uri = to_iri(str(lexica[lang].uri)+"/"+lemma)
                 else:
                     entry_uri = lemma
 
                 # create the lexical entry
                 entry = LexicalEntry(
                     uri=entry_uri,
-                    language=lexicon.language
+                    language=lexica[lang].language
                 )
 
                 # set canonicalForm (this is the lemma)
@@ -520,6 +531,6 @@ class NifGraph(Graph):
                 if pos is not None:
                     entry.set_partOfSpeechs([pos])
 
-                lexicon.add_entry(entry)
+                lexica[lang].add_entry(entry)
 
-        return lexicon
+        return lexica
