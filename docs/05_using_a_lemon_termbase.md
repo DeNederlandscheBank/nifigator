@@ -16,7 +16,7 @@ jupyter:
 # Using Ontolex-Lemon with NIF data
 
 
-Nifigator includes functionality to work with Ontolex-Lemon.
+Nifigator includes functionality to work with the Lexicon Model for Ontologies (lemon), developed by the Ontology Lexicon community group (OntoLex).
 
 We will show how to create a lexicon from NIF data and how to use an existing Ontolex-Lemon termbase to search in NIF data.
 
@@ -44,7 +44,7 @@ Then we create a lexicon from NIF data. First we extract all words with lemma an
 lexicon = nif_graph.lexicon
 ```
 
-The lexicon now contains a lexicon for all languages uased in the NIF data. In our case we only have an English lexicon.
+The lexicon now contains a lexicon for all languages used in the NIF data. In our case we only have an English lexicon.
 
 ```python
 lexicon['en']
@@ -65,6 +65,9 @@ lexicon['en']
   entry : <https://mangosaurus.eu/rdf-data/lexicon/en/for>
   entry : ...
 ```
+
+
+The lemon lexicon consists of lexical entries that can be retrieved with
 
 
 From this a lexicon graph can be made.

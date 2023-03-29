@@ -169,7 +169,7 @@ We use the English models for this document. If documents in multiple languages 
 **_NOTE:_** Here we used the lemma, pos and depparse processor. However, you can select the processors you will need; the output from processors lemma, pos and depparse will be added to the NifContext.
 
 
-Then we process the text through the Stanza pipeline.
+Then we process the text through the Stanza pipeline. This will take some time.
 
 ```python
 from nifigator import align_stanza_dict_offsets
@@ -189,7 +189,7 @@ context.load_from_dict(stanza_dict)
 
 **_NOTE:_** The Stanza pipeline assumes that between the words there is exactly one space character. In practice multiple spaces and escape characters occur, so that the start_char and the end_char of the Stanza output won't align with the start_char and end_char from the tokenizer output. Therefore we need to correct the start_char and end_char in the Stanza output to the original values. This is done with the function align_stanza_dict_offsets. It replaces the start_char and the end_char of every word from the Stanza output by the respective start_char and end_char from the tokenizer.
 
-If you process text with Stanza then the lemma will be a string Literal in the RDF data. That may not always be convenient because to find lemmas you will need to find string matches. You can also set a lexicon uri in the context. The nif:lemma will then a URIRef of the lexicon uri and the lemma. So if you do in advance: context.set_lexicon(URIRef("https://dnb.nl/rdf-data/lexicon/en/")) then the nif:lemma of the lemma "tree" will be URIRef("https://dnb.nl/rdf-data/lexicon/en/tree").
+If you process text with Stanza then the lemma will be a string Literal in the RDF data. That may not always be convenient because to find lemmas you will need to find string matches. You can also set a lexicon uri in the context. The nif:lemma will then a URIRef of the lexicon uri and the lemma. So if you do in advance: context.set_lexicon(URIRef("https://mangosaurus.eu/rdf-data/lexicon/en/")) then the nif:lemma of the lemma "tree" will be URIRef("https://mangosaurus.eu/rdf-data/lexicon/en/tree").
 
 
 Metadata can be added to the context by providing a dict with DC and DCTERMS items, for example:
@@ -236,8 +236,4 @@ from nifigator import NifGraph
 g = NifGraph(collection=collection)
 
 g.serialize("..//data//"+generate_uuid(uri=original_uri)+".ttl", format="turtle")
-```
-
-```python
-
 ```
