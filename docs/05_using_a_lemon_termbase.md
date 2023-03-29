@@ -125,6 +125,35 @@ nif_graph.bind("skos", namespace.SKOS)
 ## Running SPARQL queries
 
 ```python
+# All altLabels of the concept Risk margin
+
+q = """
+SELECT ?altlabel
+WHERE {
+    ?concept skos:prefLabel "Risk margin"@en .
+    ?concept skos:altLabel ?altlabel .
+}
+"""
+# execute the query
+results = list(nif_graph.query(q))
+
+print("Number of hits: "+str(len(results)))
+
+# print the results
+for result in results[0:5]:
+    print((result))
+```
+
+```console
+Number of hits: 59
+(rdflib.term.Literal('SE.02.01.18.01,R0550', lang='en'),)
+(rdflib.term.Literal('SR.02.01.07.01,R0640', lang='en'),)
+(rdflib.term.Literal('S.02.01.08.01,R0720', lang='en'),)
+(rdflib.term.Literal('S.02.01.08.01,R0590', lang='en'),)
+(rdflib.term.Literal('SE.02.01.16.01,R0720', lang='en'),)
+```
+
+```python
 # all occurrences of concepts that have altLabel "S.26.01.01.01,C0030"
 
 q = """
@@ -219,8 +248,4 @@ print("Number of hits: "+str(len(results)))
 
 ```console
 Number of hits: 1259
-```
-
-```python
-
 ```
