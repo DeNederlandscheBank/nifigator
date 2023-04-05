@@ -2,7 +2,7 @@
 
 import logging
 from collections import OrderedDict, deque
-from typing import Union
+from typing import Union, List
 from rdflib import Graph
 from rdflib.term import URIRef, Literal, BNode
 from rdflib.namespace import RDF, RDFS, XSD, Namespace
