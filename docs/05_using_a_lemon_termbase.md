@@ -12,8 +12,10 @@ jupyter:
     name: python3
 ---
 
+# Using Ontolex-Lemon data
 
-# Using Ontolex-Lemon with NIF data
+
+## Using Ontolex-Lemon with NIF data
 
 
 Nifigator includes functionality to work with the Lexicon Model for Ontologies (lemon), developed by the Ontology Lexicon community group (OntoLex).
@@ -21,7 +23,7 @@ Nifigator includes functionality to work with the Lexicon Model for Ontologies (
 We will show how to create a lexicon from NIF data and how to use an existing Ontolex-Lemon termbase to search in NIF data.
 
 
-## Open a graph with NIF data
+### Open a graph with NIF data
 
 
 We read the NIF data that we created earlier.
@@ -95,10 +97,11 @@ file = os.path.join("..//data//", generate_uuid(uri=original_uri)+"_lexicon.ttl"
 lexicon_graph.serialize(file, format="turtle")
 ```
 
-# Using an existing Ontolex-Lemon termbase
+## Using an existing Ontolex-Lemon termbase
 
+Below, we will give same examples based on the [Solvency 2 termbase](https://termate.readthedocs.io/en/latest/tbx2lemon.html) constructed from the Solvency 2 XBRL taxonomy.
 
-Open a Ontolex-Lemon termbase and add to graph
+Open the Ontolex-Lemon termbase and add to graph
 
 ```python
 from rdflib import Graph
@@ -110,12 +113,12 @@ termbase = Graph().parse(
 )
 ```
 
+The termbase can be combined with the nif data and we bind the prefixes to the nif graph.
+
 ```python
 # combine the termbase with the NIF data
 nif_graph += termbase
-```
 
-```python
 # bind namespaces
 from rdflib import Namespace, namespace
 nif_graph.bind("tbx", Namespace("http://tbx2rdf.lider-project.eu/tbx#"))
@@ -125,7 +128,9 @@ nif_graph.bind("decomp", Namespace("http://www.w3.org/ns/lemon/decomp#"))
 nif_graph.bind("skos", namespace.SKOS)
 ```
 
-## Running SPARQL queries
+### Running SPARQL queries
+
+Some examples of SPARQL queries:
 
 ```python
 # All altLabels of the concept Risk margin
@@ -147,6 +152,8 @@ for result in results[0:5]:
     print((result))
 ```
 
+This returns all locations in the reporting framework that has label 'risk margin'.
+
 ```console
 Number of hits: 59
 (rdflib.term.Literal('SE.02.01.18.01,R0550', lang='en'),)
@@ -155,6 +162,8 @@ Number of hits: 59
 (rdflib.term.Literal('S.02.01.08.01,R0590', lang='en'),)
 (rdflib.term.Literal('SE.02.01.16.01,R0720', lang='en'),)
 ```
+
+Now we combine the termbase data and the nif data. The termbase contains the labels and the template codes of all rows and columns. Given a specific datapoint we can look for the prefLabel (the textual representation of the row or column) and look for the lexical entry of that concept in the nif data.
 
 ```python
 # all occurrences of concepts that have altLabel "S.26.01.01.01,C0030"
@@ -178,6 +187,8 @@ for result in results[0:5]:
     print((result[0].value, result[1:]))
 ```
 
+This returns:
+
 ```console
 Number of hits: 89
 ('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_266314_266325'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
@@ -186,6 +197,8 @@ Number of hits: 89
 ('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_276241_276252'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
 ('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_289288_289297'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
 ```
+
+If we want to include the pagenumbers of the hits we can use the following query.
 
 ```python
 # all occurrences of concepts that have altLabel "S.26.01.01.01,C0030"
@@ -218,6 +231,8 @@ for result in list(results)[0:10]:
     print((result[0].value, result[1], result[2].value))
 ```
 
+This gives:
+
 ```console
 Number of hits: 89
 ('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_161209_161220'), 66)
@@ -231,6 +246,8 @@ Number of hits: 89
 ('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260925_260936'), 114)
 ('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260993_261004'), 114)
 ```
+
+Now we check for all concepts in the termbase in the text:
 
 ```python
 # All concepts in the text
@@ -249,9 +266,13 @@ results = list(nif_graph.query(q))
 print("Number of hits: "+str(len(results)))
 ```
 
+This returns:
+
 ```console
 Number of hits: 1259
 ```
+
+Sometimes terms consists of multiwords:
 
 ```python
 # All occurrence of 'dutch financial institution'
@@ -289,8 +310,4 @@ Number of hits: 8
 116925:116953
 203374:203403
 322642:322669
-```
-
-```python
-
 ```

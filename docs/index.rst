@@ -15,7 +15,7 @@ Contents
    PDF documents pipeline <02_adding_document_data>
    Adding annotations <03_adding_annotations>
    Using a SPARQL endpoint <04_using a SPARQL endpoint>
-   Using Ontolex-Lemon with NIF data <05_using_a_lemon_termbase>
+   Using Ontolex-Lemon <05_using_a_lemon_termbase>
    Contributions & Help <contributing>
    License <license>
    Authors <authors>
