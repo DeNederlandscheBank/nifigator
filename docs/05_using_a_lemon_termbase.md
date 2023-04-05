@@ -252,3 +252,45 @@ print("Number of hits: "+str(len(results)))
 ```console
 Number of hits: 1259
 ```
+
+```python
+# All occurrence of 'dutch financial institution'
+
+def find_term(s: str=""):
+    
+    words = s.split(" ")
+    q = "SELECT ?s ?e\nWHERE {\n"
+    q += "    ?w a nif:Word . \n"
+    q += "    ?w nif:beginIndex ?s . \n"
+    for idx, word in enumerate(words):
+        q += '    ?w '+'nif:nextWord/'*(idx)+'nif:lemma "'+word+'"^^xsd:string .\n'
+    q += '    ?w '+'nif:nextWord/'*(len(words)-1)+'nif:endIndex ?e .\n'    
+    q += "}"
+    q += "order by ?s"
+#     print(q)
+    return q
+
+#  execute the query
+results = list(nif_graph.query(find_term("dutch financial institution")))
+print("Number of hits: "+str(len(results))+"\n")
+
+for result in results:
+    print(str(result[0].value) + ":"+str(result[1].value))
+```
+
+```console
+Number of hits: 8
+
+40579:40607
+47488:47516
+58193:58221
+115913:115941
+116187:116217
+116925:116953
+203374:203403
+322642:322669
+```
+
+```python
+
+```
