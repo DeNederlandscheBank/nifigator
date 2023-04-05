@@ -12,11 +12,21 @@ jupyter:
     name: python3
 ---
 
+# Using Ontolex-Lemon data
 
-# Using a Ontolex-Lemon termbase
+
+## Using Ontolex-Lemon with NIF data
 
 
-## Open a graph with NIF data
+Nifigator includes functionality to work with the Lexicon Model for Ontologies (lemon), developed by the Ontology Lexicon community group (OntoLex).
+
+We will show how to create a lexicon from NIF data and how to use an existing Ontolex-Lemon termbase to search in NIF data.
+
+
+### Open a graph with NIF data
+
+
+We read the NIF data that we created earlier.
 
 ```python
 from nifigator import NifGraph, generate_uuid
@@ -25,14 +35,77 @@ original_uri = "https://www.dnb.nl/media/4kobi4vf/dnb-annual-report-2021.pdf"
 uri = "https://dnb.nl/rdf-data/"+generate_uuid(uri=original_uri)
 
 # create a NifGraph from this collection and serialize it 
-g = NifGraph().parse(
+nif_graph = NifGraph().parse(
     "..//data//"+generate_uuid(uri=original_uri)+".ttl", format="turtle"
 )
 ```
 
-Open a Ontolex-Lemon termbase and add to graph
+Then we create a lexicon from NIF data. First we extract all words with lemma and part to speech tags.
 
 ```python
+lexicon = nif_graph.lexicon
+```
+
+The lexicon now contains a lexicon for all languages used in the NIF data. In our case we only have an English lexicon.
+
+```python
+lexicon['en']
+```
+
+```console
+(ontolex:Lexicon) uri = <https://mangosaurus.eu/rdf-data/lexicon/en>
+  language : en
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/DNB>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/in>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/the>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/of>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/money>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/,>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/and>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/other>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/financial>
+  entry : <https://mangosaurus.eu/rdf-data/lexicon/en/for>
+  entry : ...
+```
+
+
+The lemon lexicon consists of lexical entries that can be retrieved with
+
+
+From this a lexicon graph can be made.
+
+```python
+from nifigator import LemonGraph
+
+lexicon_graph = LemonGraph(lexicon=lexicon)
+```
+
+```python
+print("Number of triples: "+str(len(lexicon_graph)))
+```
+
+This shows:
+
+```console
+Number of triples: 34298
+```
+
+```python
+# store graph to a file
+import os
+file = os.path.join("..//data//", generate_uuid(uri=original_uri)+"_lexicon.ttl")
+lexicon_graph.serialize(file, format="turtle")
+```
+
+## Using an existing Ontolex-Lemon termbase
+
+Below, we will give same examples based on the [Solvency 2 termbase](https://termate.readthedocs.io/en/latest/tbx2lemon.html) constructed from the Solvency 2 XBRL taxonomy.
+
+Open the Ontolex-Lemon termbase and add to graph
+
+```python
+from rdflib import Graph
+
 TAXO_NAME = "EIOPA_SolvencyII_XBRL_Taxonomy_2.6.0_PWD_with_External_Files"
 
 termbase = Graph().parse(
@@ -40,46 +113,61 @@ termbase = Graph().parse(
 )
 ```
 
+The termbase can be combined with the nif data and we bind the prefixes to the nif graph.
+
 ```python
+# combine the termbase with the NIF data
+nif_graph += termbase
+
 # bind namespaces
 from rdflib import Namespace, namespace
-termbase.bind("tbx", Namespace("http://tbx2rdf.lider-project.eu/tbx#"))
-termbase.bind("ontolex", Namespace("http://www.w3.org/ns/lemon/ontolex#"))
-termbase.bind("lexinfo", Namespace("http://www.lexinfo.net/ontology/3.0/lexinfo#"))
-termbase.bind("decomp", Namespace("http://www.w3.org/ns/lemon/decomp#"))
-termbase.bind("skos", namespace.SKOS)
+nif_graph.bind("tbx", Namespace("http://tbx2rdf.lider-project.eu/tbx#"))
+nif_graph.bind("ontolex", Namespace("http://www.w3.org/ns/lemon/ontolex#"))
+nif_graph.bind("lexinfo", Namespace("http://www.lexinfo.net/ontology/3.0/lexinfo#"))
+nif_graph.bind("decomp", Namespace("http://www.w3.org/ns/lemon/decomp#"))
+nif_graph.bind("skos", namespace.SKOS)
 ```
 
-```python
-g += termbase
-```
+### Running SPARQL queries
+
+Some examples of SPARQL queries:
 
 ```python
-# all terms that contain the canonical word risk
+# All altLabels of the concept Risk margin
+
 q = """
-SELECT ?wr
+SELECT ?altlabel
 WHERE {
-    ?e decomp:constituent ?c1 .
-    ?e ontolex:canonicalForm ?cf .
-    ?cf ontolex:writtenRep ?wr .
-    ?c1 decomp:correspondsTo ?l .
-    ?l ontolex:canonicalForm ?can .
-    ?can ontolex:writtenRep "mitigation"@en .
+    ?concept skos:prefLabel "Risk margin"@en .
+    ?concept skos:altLabel ?altlabel .
 }
 """
 # execute the query
-results = list(g.query(q))
+results = list(nif_graph.query(q))
 
-print(len(results))
+print("Number of hits: "+str(len(results)))
+
 # print the results
 for result in results[0:5]:
-    print(result[0].value)
+    print((result))
 ```
 
-## Running SPARQL queries
+This returns all locations in the reporting framework that has label 'risk margin'.
+
+```console
+Number of hits: 59
+(rdflib.term.Literal('SE.02.01.18.01,R0550', lang='en'),)
+(rdflib.term.Literal('SR.02.01.07.01,R0640', lang='en'),)
+(rdflib.term.Literal('S.02.01.08.01,R0720', lang='en'),)
+(rdflib.term.Literal('S.02.01.08.01,R0590', lang='en'),)
+(rdflib.term.Literal('SE.02.01.16.01,R0720', lang='en'),)
+```
+
+Now we combine the termbase data and the nif data. The termbase contains the labels and the template codes of all rows and columns. Given a specific datapoint we can look for the prefLabel (the textual representation of the row or column) and look for the lexical entry of that concept in the nif data.
 
 ```python
-# 
+# all occurrences of concepts that have altLabel "S.26.01.01.01,C0030"
+
 q = """
 SELECT ?r ?word ?concept
 WHERE {
@@ -90,51 +178,44 @@ WHERE {
 }
 """
 # execute the query
-results = list(g.query(q))
+results = list(nif_graph.query(q))
 
-print(len(results))
+print("Number of hits: "+str(len(results)))
+
 # print the results
 for result in results[0:5]:
     print((result[0].value, result[1:]))
 ```
 
-```python
-# 
-q = """
-SELECT ?s ?w
-WHERE {
-    ?o rdf:type ontolex:Form .
-    ?o ontolex:writtenRep "S.26.01.01.01,C0030"@en .
-    ?s rdf:type ontolex:LexicalEntry .
-    ?s ?p ?o .
-    ?s ontolex:canonicalForm [rdf:type ontolex:Form ; ontolex:writtenRep ?w ] .
-}
-"""
-# execute the query
-results = list(g.query(q))
+This returns:
 
-print(len(results))
-# print the results
-for result in results[0:5]:
-    print(result)
+```console
+Number of hits: 89
+('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_266314_266325'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
+('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_272070_272079'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
+('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_273065_273074'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
+('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_276241_276252'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
+('liability', (rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_289288_289297'), rdflib.term.URIRef('http://eiopa.europa.eu/xbrl/s2md/fws/solvency/solvency2/2021-07-15/tab/s.26.01.01.01#s2md_c5730')))
 ```
 
-```python
-
-```
+If we want to include the pagenumbers of the hits we can use the following query.
 
 ```python
-# including the page that the word contains
+# all occurrences of concepts that have altLabel "S.26.01.01.01,C0030"
+# including the pagenumber
+
 q = """
-SELECT ?r ?word ?page ?concept
+SELECT ?r ?word ?pagenumber ?concept
 WHERE {
     ?word nif:lemma ?t .
-    ?word nif:beginIndex ?word_beginIndex .
-    ?word nif:endIndex ?word_endIndex .
     ?entry ontolex:canonicalForm [ rdfs:label ?t ; ontolex:writtenRep ?r] .
     ?entry ontolex:sense [ ontolex:reference ?concept ] .
     ?concept skos:altLabel "S.26.01.01.01,C0030"@en .
+
+    ?word nif:beginIndex ?word_beginIndex .
+    ?word nif:endIndex ?word_endIndex .
     ?page rdf:type nif:Page .
+    ?page nif:pageNumber ?pagenumber .
     ?page nif:beginIndex ?page_beginIndex .
     FILTER( ?page_beginIndex <= ?word_beginIndex ) .
     ?page nif:endIndex ?page_endIndex .
@@ -142,171 +223,91 @@ WHERE {
 }
 """
 # execute the query
-results = g.query(q)
+results = nif_graph.query(q)
 
-print(len(results))
-for result in results:
-    print((result[0].value, result[1:]))
+print("Number of hits: "+str(len(results)))
+
+for result in list(results)[0:10]:
+    print((result[0].value, result[1], result[2].value))
 ```
 
+This gives:
+
+```console
+Number of hits: 89
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_161209_161220'), 66)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_160848_160859'), 66)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_168715_168726'), 69)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_261149_261160'), 114)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260373_260384'), 114)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260676_260687'), 114)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260742_260753'), 114)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260865_260876'), 114)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260925_260936'), 114)
+('liability', rdflib.term.URIRef('https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=word_260993_261004'), 114)
+```
+
+Now we check for all concepts in the termbase in the text:
+
 ```python
-# all terms that contain the canonical word risk
+# All concepts in the text
+
 q = """
-SELECT ?wr
+SELECT distinct ?concept
 WHERE {
-    ?e decomp:constituent ?c1 .
-    ?e ontolex:canonicalForm ?cf .
-    ?cf ontolex:writtenRep ?wr .
-    ?c1 decomp:correspondsTo ?l .
-    ?l ontolex:canonicalForm ?can .
-    ?can ontolex:writtenRep "reinsurance"@en .
+    ?word nif:lemma ?t .
+    ?entry ontolex:canonicalForm [ rdfs:label ?t ; ontolex:writtenRep ?r] .
+    ?entry ontolex:sense [ ontolex:reference ?concept ] .
 }
 """
 # execute the query
-results = g.query(q)
+results = list(nif_graph.query(q))
 
-print(len(results))
-# print the results
+print("Number of hits: "+str(len(results)))
+```
+
+This returns:
+
+```console
+Number of hits: 1259
+```
+
+Sometimes terms consists of multiwords:
+
+```python
+# All occurrence of 'dutch financial institution'
+
+def find_term(s: str=""):
+    
+    words = s.split(" ")
+    q = "SELECT ?s ?e\nWHERE {\n"
+    q += "    ?w a nif:Word . \n"
+    q += "    ?w nif:beginIndex ?s . \n"
+    for idx, word in enumerate(words):
+        q += '    ?w '+'nif:nextWord/'*(idx)+'nif:lemma "'+word+'"^^xsd:string .\n'
+    q += '    ?w '+'nif:nextWord/'*(len(words)-1)+'nif:endIndex ?e .\n'    
+    q += "}"
+    q += "order by ?s"
+#     print(q)
+    return q
+
+#  execute the query
+results = list(nif_graph.query(find_term("dutch financial institution")))
+print("Number of hits: "+str(len(results))+"\n")
+
 for result in results:
-    print(result)
+    print(str(result[0].value) + ":"+str(result[1].value))
 ```
 
-```python
-# all terms that contain the canonical word risk
-q = """
-SELECT distinct ?label
-WHERE {
-    ?e a ontolex:Word .
-    ?e lexinfo:partOfSpeech <http://purl.org/olia/olia.owl#ProperNoun> .
-    ?e ontolex:sense ?sense .
-    ?sense ontolex:reference ?ref .
-    ?ref skos:prefLabel ?label .
-    FILTER ( lang(?label) = "en" )
-}
-"""
-# execute the query
-results = g.query(q)
+```console
+Number of hits: 8
 
-print(len(results))
-# print the results
-for result in results:
-    print(result)
-```
-
-## Creating a lexicon from NIF data
-
-```python
-from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as default
-import pandas as pd
-
-import ruleminer
-import logging, sys
-logging.basicConfig(stream=sys.stdout,
-                    format='%(asctime)s %(message)s',
-                    level=logging.INFO)
-
-# Connect to triplestore.
-store = SPARQLUpdateStore()
-query_endpoint = 'http://localhost:3030/nifigator/sparql'
-update_endpoint = 'http://localhost:3030/nifigator/update'
-store.open((query_endpoint, update_endpoint))
-
-from nifigator import NifGraph
-
-# Open a graph in the open store and set identifier to default graph ID.
-graph = NifGraph(store=store, identifier=default)
-```
-
-```python
-q = """
-SELECT ?anchor ?lemma ?pos
-WHERE {
-    SERVICE <http://localhost:3030/nifigator/sparql> 
-    {
-        ?w rdf:type nif:Word .
-        ?w nif:anchorOf ?anchor .
-        OPTIONAL {?w nif:lemma ?lemma . } .
-        OPTIONAL {?w nif:pos ?pos . } .
-    }
-}
-"""
-# execute the query
-results = list(graph.query(q))
-```
-
-```python
-def noNumber(s: str=""):
-    return not s.replace('.', '', 1).replace(',', '', 1).isdigit()
-
-from termate import Lexicon, LexicalEntry, Form
-from rdflib.term import URIRef
-from iribaker import to_iri
-
-lexicon = Lexicon(uri=URIRef("https://mangosaurus.eu/rdf-data/lexicon/en"))
-lexicon.set_language("en")
-
-for anchorOf, lemma, pos in results:
-
-    if lemma is not None and noNumber(lemma):
-        
-        entry_uri = to_iri(str(lexicon.uri)+"/"+lemma)
-        
-        entry = LexicalEntry(
-            uri=entry_uri,
-            language=lexicon.language
-        )
-        # set canonicalForm (this is the lemma)
-        entry.set_canonicalForm(
-            Form(
-                uri=URIRef(entry_uri),
-                formVariant="canonicalForm",
-                writtenReps=[lemma])
-            )
-        # set otherForm if the anchorOf is not the same as the lemma
-        if anchorOf != lemma:
-            entry.set_otherForms([
-                Form(
-                    uri=URIRef(entry_uri),
-                    formVariant="otherForm",
-                    writtenReps=[anchorOf]
-                )])
-        if pos is not None:
-            entry.set_partOfSpeechs([pos])
-        lexicon.add_entry(entry)
-```
-
-```python
-
-```
-
-```python
-from rdflib import Graph, Namespace, namespace
-
-lexicon_graph = Graph()
-lexicon_graph.bind("tbx", Namespace("http://tbx2rdf.lider-project.eu/tbx#"))
-lexicon_graph.bind("ontolex", Namespace("http://www.w3.org/ns/lemon/ontolex#"))
-lexicon_graph.bind("lexinfo", Namespace("http://www.lexinfo.net/ontology/3.0/lexinfo#"))
-lexicon_graph.bind("decomp", Namespace("http://www.w3.org/ns/lemon/decomp#"))
-lexicon_graph.bind("skos", namespace.SKOS)
-for triple in lexicon.triples():
-    lexicon_graph.add(triple)
-```
-
-```python
-len(lexicon_graph)
-```
-
-```python
-import os
-file = os.path.join("P:\\projects\\rdf-data\\termbases", "dnb.ttl")
-lexicon_graph.serialize(file, format="turtle")
-```
-
-```python
-
-```
-
-```python
-
+40579:40607
+47488:47516
+58193:58221
+115913:115941
+116187:116217
+116925:116953
+203374:203403
+322642:322669
 ```

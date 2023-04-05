@@ -241,6 +241,9 @@ class NifString(NifBase):
                             + ","
                             + str(self.endIndex)
                         )
+                else:
+                    if "&nif=context" not in uri:
+                        uri = uri + obj_str
             super().set_uri(uri=uri)
 
     def set_beginIndex(self, beginIndex: Union[Literal, int] = None):
@@ -1489,7 +1492,8 @@ class NifPage(NifStructure):
         """
         if self.uri is not None:
             yield (self.uri, RDF.type, NIF.Page)
-            yield (self.uri, NIF.pageNumber, self._pageNumber)
+            if self._pageNumber is not None:
+                yield (self.uri, NIF.pageNumber, self._pageNumber)
             for triple in super().triples():
                 yield triple
 
@@ -1619,7 +1623,7 @@ class NifWord(NifStructure):
                 return self._lemma
         elif self.graph is not None:
             for item in self.graph.objects(subject=self.uri, predicate=NIF.lemma):
-                if isinstance(self._lemma, Literal):
+                if isinstance(item, Literal):
                     return item.value
                 else:
                     return item

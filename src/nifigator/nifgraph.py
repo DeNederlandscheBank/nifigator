@@ -13,6 +13,7 @@ from rdflib.namespace import DC, DCTERMS, NamespaceManager
 from rdflib.store import Store
 from rdflib.term import IdentifiedNode, URIRef, Literal
 from rdflib.plugins.stores import sparqlstore
+from iribaker import to_iri
 
 from .const import ITSRDF, NIF, OLIA
 from .converters import nafConverter
@@ -21,6 +22,7 @@ from .nifobjects import (
     NifContext,
     NifContextCollection,
 )
+from .lemonobjects import Lexicon, LexicalEntry, Form
 
 DEFAULT_URI = "https://mangosaurus.eu/rdf-data/"
 DEFAULT_PREFIX = "mangosaurus"
@@ -438,3 +440,97 @@ class NifGraph(Graph):
                 o = Literal(o.value.replace("\r\n", "\n"), datatype=XSD.string)
             graph.add((s, p, o))
         return graph
+
+    @property
+    def lexicon(self):
+        """ """
+        def noNumber(s: str=""):
+            return not s.replace('.', '', 1).replace(',', '', 1).isdigit()
+        # query for all anchorOfs of all word with optional lemma
+        if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
+            q = (
+                """
+                SELECT ?anchor ?lemma ?pos ?lang
+                WHERE {
+                    SERVICE <"""
+                    + graph.store.query_endpoint
+                    + """>
+                    {
+                        ?w rdf:type nif:Word .
+                        ?w nif:anchorOf ?anchor .
+                        ?w nif:referenceContext ?context .
+                        OPTIONAL {?w nif:lemma ?lemma . } .
+                        OPTIONAL {?w nif:pos ?pos . } .
+                        OPTIONAL {?context dc:language ?lang }
+                    }
+                }"""
+            )
+        else:
+            q = (
+                """
+                SELECT ?anchor ?lemma ?pos ?lang
+                WHERE {
+                    ?w rdf:type nif:Word .
+                    ?w nif:anchorOf ?anchor .
+                    ?w nif:referenceContext ?context .
+                    OPTIONAL {?w nif:lemma ?lemma . } .
+                    OPTIONAL {?w nif:pos ?pos . } .
+                    OPTIONAL {?context dc:language ?lang }
+                }
+            """
+            )
+        # execute the query
+        results = self.query(q)
+
+        lexica = dict()
+
+        for anchorOf, lemma, pos, lang in results:
+
+            if lemma is not None and noNumber(lemma):
+
+                # default language is "en"
+                if lang is None:
+                    lang = "en"
+
+                # construct lexicon if necessary
+                if lang not in lexica.keys():
+                    lexica[lang] = Lexicon(uri=URIRef(DEFAULT_URI+"lexicon/"+lang)) 
+                    lexica[lang].set_language(lang)
+
+                
+                # derive lexical entry uri from the lemma
+                if not isinstance(lemma, URIRef):
+                    entry_uri = to_iri(str(lexica[lang].uri)+"/"+lemma)
+                else:
+                    entry_uri = lemma
+
+                # create the lexical entry
+                entry = LexicalEntry(
+                    uri=entry_uri,
+                    language=lexica[lang].language
+                )
+
+                # set canonicalForm (this is the lemma)
+                entry.set_canonicalForm(
+                    Form(
+                        uri=URIRef(entry_uri),
+                        formVariant="canonicalForm",
+                        writtenReps=[lemma])
+                    )
+
+                # set otherForm if the anchorOf is not the same as the lemma
+                if anchorOf.value != lemma.value:
+                    entry.set_otherForms([
+                        Form(
+                            uri=URIRef(entry_uri),
+                            formVariant="otherForm",
+                            writtenReps=[anchorOf]
+                        )])
+
+                # set part of speech if it exists
+                if pos is not None:
+                    entry.set_partOfSpeechs([pos])
+
+                lexica[lang].add_entry(entry)
+
+        return lexica
