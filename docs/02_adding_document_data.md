@@ -33,9 +33,10 @@ It is often useful to transform the original url or location of a document to a 
 
 ```python
 from nifigator import generate_uuid
+from rdflib import URIRef
 
 original_uri = "https://www.dnb.nl/media/4kobi4vf/dnb-annual-report-2021.pdf"
-uri = "https://dnb.nl/rdf-data/"+generate_uuid(uri=original_uri)
+base_uri = URIRef("https://dnb.nl/rdf-data/"+generate_uuid(uri=original_uri))
 ```
 
 Then we construct the context
@@ -45,7 +46,7 @@ from nifigator import NifContext, OffsetBasedString
 
 # Make a context by passing uri, uri scheme and string
 context = NifContext(
-    uri=uri,
+    base_uri=base_uri,
     URIScheme=OffsetBasedString,
     isString=pdf.text,
 )
@@ -53,7 +54,7 @@ print(context)
 ```
 
 ```console
-(nif:Context) uri = <https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f>
+(nif:Context) uri = <https://dnb.nl/rdf-data/nif-5282967702ae37d486ad338b9771ca8f&nif=context>
   isString : 'DNB Annual Report 2021\nStriking a \nnew balance\n\nDe Nederlandsche Bank N.V.\n2021
 Annual Report\n\nStriking a new balance\n\nPresented to the General Meeting on 16 March
 2022.\n\n1\n\nDNB Annual Report 2021The cut-off date for this report is 10 March
@@ -78,7 +79,7 @@ from nifigator import NifPage
 pages = [
     NifPage(
         URIScheme=OffsetBasedString,
-        uri=uri,
+        base_uri=base_uri,
         beginIndex=page.beginIndex,
         endIndex=page.endIndex,
         pageNumber=page.pageNumber,

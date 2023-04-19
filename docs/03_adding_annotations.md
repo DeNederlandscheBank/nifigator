@@ -5,7 +5,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.14.4
+      jupytext_version: 1.14.5
   kernelspec:
     display_name: Python 3 (ipykernel)
     language: python
@@ -23,10 +23,11 @@ First we create a collection with one context.
 ```python
 # For the NLP data we create a NifContext and a NifContextCollection
 from nifigator import NifContext, NifContextCollection, OffsetBasedString
+from rdflib import URIRef
 
 # Create context with two sentences
 context = NifContext(
-  uri="https://mangosaurus.eu/rdf-data/doc_1",
+  base_uri=URIRef("https://mangosaurus.eu/rdf-data/doc_1"),
   URIScheme=OffsetBasedString,
   isString="The cat sat on the mat. Felix was his name."
 )
@@ -46,7 +47,7 @@ from nifigator import NifPhrase, EntityOccurrence
 
 # Create the EntityOccurrence
 entity = NifPhrase(
-    uri="https://mangosaurus.eu/rdf-data/doc_1",
+    base_uri="https://mangosaurus.eu/rdf-data/doc_1",
     URIScheme=OffsetBasedString,
     referenceContext=context,
     beginIndex=24,

@@ -81,11 +81,11 @@ UD2OLIA_mappings = {
         "Exc": None,
         "Ind": "olia:IndefinitePronoun",
         "Int": "olia:InterrogativePronoun",
-        "Neg": None,
+        "Neg": "NegativePronoun",
         "Prs": "olia:PersonalPronoun",
         "Rcp": "olia:ReciprocalPronoun",
         "Rel": "olia:RelativePronoun",
-        "Tot": None,
+        "Tot": "olia:PronounOrDeterminer",
     },
     "Number": {
         "Coll": None,
