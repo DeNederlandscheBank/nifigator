@@ -346,9 +346,9 @@ class NifGraph(Graph):
     ):
         collection = NifContextCollection(uri=collection_uri)
         for context_uri in context_uris:
-            nif_context = NifContext(URIScheme=self.URIScheme).load(
-                graph=self, uri=context_uri
-            )
+            nif_context = NifContext(URIScheme=self.URIScheme, 
+                                     graph=self,
+                                     uri=context_uri).load()
             collection.add_context(context=nif_context)
         return collection
 

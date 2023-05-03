@@ -217,39 +217,40 @@ class NifString(NifBase):
         Sets the uri of the object
         """
         if uri is None:
-            base_uri = self._base_uri.replace("&nif=context", "")
-            if isinstance(self, NifContext):
-                uri = base_uri+"&nif=context"
-            elif isinstance(self, NifContextCollection):
-                uri = base_uri+"&nif=collection"
-            elif isinstance(self, NifPage):
-                uri = base_uri+"&nif=page"
-            elif isinstance(self, NifParagraph):
-                uri = base_uri+"&nif=paragraph"
-            elif isinstance(self, NifSentence):
-                uri = base_uri+"&nif=sentence"
-            elif isinstance(self, NifPhrase):
-                uri = base_uri+"&nif=phrase"
-            elif isinstance(self, NifWord):
-                uri = base_uri+"&nif=word"
-            if not isinstance(self, NifContext):
-                if self.URIScheme == RFC5147String:
-                    uri = (
-                        uri
-                        + "#char="
-                        + str(self.beginIndex)
-                        + ","
-                        + str(self.endIndex)
-                    )
-                else: 
-                    # default is OffsetBasedString:
-                    uri = (
-                        uri
-                        + "_"
-                        + str(self.beginIndex)
-                        + "_"
-                        + str(self.endIndex)
-                    )
+            if self._base_uri is not None:
+                base_uri = self._base_uri.replace("&nif=context", "")
+                if isinstance(self, NifContext):
+                    uri = base_uri+"&nif=context"
+                elif isinstance(self, NifContextCollection):
+                    uri = base_uri+"&nif=collection"
+                elif isinstance(self, NifPage):
+                    uri = base_uri+"&nif=page"
+                elif isinstance(self, NifParagraph):
+                    uri = base_uri+"&nif=paragraph"
+                elif isinstance(self, NifSentence):
+                    uri = base_uri+"&nif=sentence"
+                elif isinstance(self, NifPhrase):
+                    uri = base_uri+"&nif=phrase"
+                elif isinstance(self, NifWord):
+                    uri = base_uri+"&nif=word"
+                if not isinstance(self, NifContext):
+                    if self.URIScheme == RFC5147String:
+                        uri = (
+                            uri
+                            + "#char="
+                            + str(self.beginIndex)
+                            + ","
+                            + str(self.endIndex)
+                        )
+                    else: 
+                        # default is OffsetBasedString:
+                        uri = (
+                            uri
+                            + "_"
+                            + str(self.beginIndex)
+                            + "_"
+                            + str(self.endIndex)
+                        )
         super().set_uri(uri=uri)
 
     def set_beginIndex(self, beginIndex: Union[Literal, int] = None):
