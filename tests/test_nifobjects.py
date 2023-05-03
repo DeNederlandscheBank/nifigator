@@ -5,10 +5,20 @@ import nifigator
 from rdflib.term import URIRef
 import stanza
 
-def test_nif_context():
-    """API Tests"""
+def test_nif_context_1():
     context = nifigator.NifContext(
-        uri="https://mangosaurus.eu/rdf-data/doc_1",
+        base_uri=URIRef("https://mangosaurus.eu/rdf-data/doc_1"),
+        URIScheme=nifigator.OffsetBasedString,
+        isString="The cat sat on the mat. Felix was his name.",
+    )
+    assert type(context) == nifigator.NifContext
+    assert context.isString == "The cat sat on the mat. Felix was his name."
+    assert context.uri == URIRef("https://mangosaurus.eu/rdf-data/doc_1&nif=context")
+    assert context.URIScheme == nifigator.OffsetBasedString
+
+def test_nif_context_2():
+    context = nifigator.NifContext(
+        uri=URIRef("https://mangosaurus.eu/rdf-data/doc_1"),
         URIScheme=nifigator.OffsetBasedString,
         isString="The cat sat on the mat. Felix was his name.",
     )

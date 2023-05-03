@@ -28,7 +28,7 @@ The output shows the string representation of the :class:`~nifigator.nifobjects.
 
 .. code-block:: none
 
-        (nif:Context) uri = <https://mangosaurus.eu/rdf-data/doc_1>
+        (nif:Context) uri = <https://mangosaurus.eu/rdf-data/doc_1&nif=context>
           isString : "The cat sat on the mat. Felix was his name."
 
 .. note::
@@ -65,7 +65,7 @@ This gives:
 .. code-block:: none
 
         (nif:Sentence) uri = https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23
-          referenceContext : https://mangosaurus.eu/rdf-data/doc_1
+          referenceContext : https://mangosaurus.eu/rdf-data/doc_1&nif=context
           beginIndex : 0
           endIndex : 23
           anchorOf : "The cat sat on the mat."
@@ -86,7 +86,7 @@ This results in:
 .. code-block:: none
 
         (nif:Word) uri = https://mangosaurus.eu/rdf-data/doc_1&nif=word_24_29
-          referenceContext : https://mangosaurus.eu/rdf-data/doc_1
+          referenceContext : https://mangosaurus.eu/rdf-data/doc_1&nif=context
           beginIndex : 24
           endIndex : 29
           anchorOf : "Felix"
@@ -137,7 +137,7 @@ This gives:
 .. code-block:: none
 
         (nif:ContextCollection) uri = https://mangosaurus.eu/rdf-data
-          hasContext : https://mangosaurus.eu/rdf-data/doc_1
+          hasContext : https://mangosaurus.eu/rdf-data/doc_1&nif=context
           conformsTo : http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/2.1
 
 The contexts are retrievable as a list of the collection and can be accessed in the following way:
@@ -193,7 +193,7 @@ This gives the Nif data in RDF/turtle format:
       nif:oliaLink olia:Article,
           olia:Definite ;
       nif:pos olia:Determiner ;
-      nif:referenceContext <https://mangosaurus.eu/rdf-data/doc_1> ;
+      nif:referenceContext <https://mangosaurus.eu/rdf-data/doc_1&nif=context> ;
       nif:sentence <https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23> .
 
   <https://mangosaurus.eu/rdf-data/doc_1&nif=word_19_22> a nif:OffsetBasedString,
@@ -209,7 +209,7 @@ This gives the Nif data in RDF/turtle format:
       nif:lemma "mat"^^xsd:string ;
       nif:oliaLink olia:Singular ;
       nif:pos olia:CommonNoun ;
-      nif:referenceContext <https://mangosaurus.eu/rdf-data/doc_1> ;
+      nif:referenceContext <https://mangosaurus.eu/rdf-data/doc_1&nif=context> ;
       nif:sentence <https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23> .
 
 You can also parse the serialized data from this graph into another :class:`~nifigator.nifgraph.NifGraph` and check whether they are isomorphic (meaning that they contain the same triples excepts from the blank nodes).
@@ -248,7 +248,7 @@ The code will look for data in the graph that satisfies the Nif data format. Thi
 .. code-block:: none
 
         (nif:ContextCollection) uri = https://mangosaurus.eu/rdf-data
-          hasContext : https://mangosaurus.eu/rdf-data/doc_1
+          hasContext : https://mangosaurus.eu/rdf-data/doc_1&nif=context
           conformsTo : http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/2.1
 
 All underlying Nif data can be accessed from this collection in the manner described above, so you can do
@@ -262,7 +262,7 @@ Which returns:
 .. code-block:: none
 
         (nif:Word) uri = https://mangosaurus.eu/rdf-data/doc_1&nif=word_0_3
-          referenceContext : https://mangosaurus.eu/rdf-data/doc_1
+          referenceContext : https://mangosaurus.eu/rdf-data/doc_1&nif=context
           nifsentence : https://mangosaurus.eu/rdf-data/doc_1&nif=sentence_0_23
           beginIndex : 0
           endIndex : 3

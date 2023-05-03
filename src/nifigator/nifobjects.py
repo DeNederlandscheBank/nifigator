@@ -88,6 +88,8 @@ class NifString(NifBase):
 
     :param URIScheme: the URIScheme of the object
 
+    :param base_uri: the uri from which the uri of the object is derived
+
     :param uri: the uri of the object
 
     :param beginIndex: the start index in the context string
@@ -101,7 +103,8 @@ class NifString(NifBase):
     def __init__(
         self,
         URIScheme: str = None,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
         referenceContext: NifContext = None,
@@ -111,6 +114,7 @@ class NifString(NifBase):
         self.set_referenceContext(referenceContext)
         self.set_beginIndex(beginIndex)
         self.set_endIndex(endIndex)
+        self.set_base_uri(base_uri)
         self.set_uri(uri)
         self.set_graph(graph)
 
@@ -202,38 +206,35 @@ class NifString(NifBase):
         """
         return self._URIScheme
 
-    def set_uri(self, uri: Union[URIRef, str] = None):
+    def set_base_uri(self, base_uri: URIRef = None):
+        """
+        Sets the base uri of the object
+        """
+        self._base_uri = base_uri
+
+    def set_uri(self, uri: URIRef = None):
         """
         Sets the uri of the object
         """
-        if uri is not None:
-            if not isinstance(uri, URIRef):
+        if uri is None:
+            if self._base_uri is not None:
+                base_uri = self._base_uri.replace("&nif=context", "")
                 if isinstance(self, NifContext):
-                    obj_str = "&nif=context"
+                    uri = base_uri+"&nif=context"
                 elif isinstance(self, NifContextCollection):
-                    obj_str = "&nif=collection"
+                    uri = base_uri+"&nif=collection"
                 elif isinstance(self, NifPage):
-                    obj_str = "&nif=page"
+                    uri = base_uri+"&nif=page"
                 elif isinstance(self, NifParagraph):
-                    obj_str = "&nif=paragraph"
+                    uri = base_uri+"&nif=paragraph"
                 elif isinstance(self, NifSentence):
-                    obj_str = "&nif=sentence"
+                    uri = base_uri+"&nif=sentence"
                 elif isinstance(self, NifPhrase):
-                    obj_str = "&nif=phrase"
+                    uri = base_uri+"&nif=phrase"
                 elif isinstance(self, NifWord):
-                    obj_str = "&nif=word"
+                    uri = base_uri+"&nif=word"
                 if not isinstance(self, NifContext):
-                    uri = uri.replace("&nif=context", "")
-                    if self.URIScheme == OffsetBasedString:
-                        uri = (
-                            uri
-                            + obj_str
-                            + "_"
-                            + str(self.beginIndex)
-                            + "_"
-                            + str(self.endIndex)
-                        )
-                    elif self.URIScheme == RFC5147String:
+                    if self.URIScheme == RFC5147String:
                         uri = (
                             uri
                             + "#char="
@@ -241,10 +242,16 @@ class NifString(NifBase):
                             + ","
                             + str(self.endIndex)
                         )
-                else:
-                    if "&nif=context" not in uri:
-                        uri = uri + obj_str
-            super().set_uri(uri=uri)
+                    else: 
+                        # default is OffsetBasedString:
+                        uri = (
+                            uri
+                            + "_"
+                            + str(self.beginIndex)
+                            + "_"
+                            + str(self.endIndex)
+                        )
+        super().set_uri(uri=uri)
 
     def set_beginIndex(self, beginIndex: Union[Literal, int] = None):
         """
@@ -321,6 +328,8 @@ class NifContext(NifString):
 
     :param URIScheme: the URIScheme of the object
 
+    :param base_uri: the uri from which the uri of the object is derived
+
     :param uri: the uri of the object
 
     :param sourceUrl: the source url of the context
@@ -336,7 +345,8 @@ class NifContext(NifString):
     def __init__(
         self,
         URIScheme: str = None,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         sourceUrl: URIRef = None,
         predLang: URIRef = None,
         isString: Union[Literal, str] = None,
@@ -346,6 +356,7 @@ class NifContext(NifString):
     ):
         super().__init__(
             URIScheme=URIScheme,
+            base_uri=base_uri,
             uri=uri,
             beginIndex=0 if isString is not None else None,
             endIndex=len(isString) if isString is not None else None,
@@ -846,7 +857,7 @@ class NifContext(NifString):
         if stanza_dict is not None:
             for sent_idx, sent in enumerate(stanza_dict):
                 nif_sent = NifSentence(
-                    uri=str(self.uri),
+                    base_uri=self.uri,
                     beginIndex=sent[0]["start_char"],
                     endIndex=sent[-1]["end_char"],
                     referenceContext=self,
@@ -856,7 +867,7 @@ class NifContext(NifString):
 
                 for word_idx, word in enumerate(sent):
                     nif_word = NifWord(
-                        uri=str(self.uri),
+                        base_uri=self.uri,
                         beginIndex=word["start_char"],
                         endIndex=word["end_char"],
                         referenceContext=self,
@@ -911,13 +922,25 @@ class NifContext(NifString):
                         sentence.set_nextSentence(sentences[sent_idx + 1])
                     if sent_idx > 0:
                         sentence.set_previousSentence(sentences[sent_idx - 1])
-        
+
+            # set the pages of each sentence where it occurs
+            pages = self.pages
+            page_idx = 0
+            for sentence in self.sentences:
+                sentence.add_page(pages[page_idx])
+                if page_idx < len(pages)-1:
+                    while sentence.endIndex > pages[page_idx].endIndex:
+                        page_idx += 1
+                        sentence.add_page(pages[page_idx])
+
 
 class NifStructure(NifString):
     """
     A NIF Structure
 
     :param URIScheme: the URIScheme of the object
+
+    :param base_uri: the uri from which the uri of the object is derived
 
     :param uri: the uri of the object
 
@@ -931,7 +954,8 @@ class NifStructure(NifString):
 
     def __init__(
         self,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         URIScheme: str = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
@@ -940,6 +964,7 @@ class NifStructure(NifString):
     ):
         super().__init__(
             URIScheme=URIScheme,
+            base_uri=base_uri,
             uri=uri,
             beginIndex=beginIndex,
             endIndex=endIndex,
@@ -962,6 +987,8 @@ class NifPhrase(NifStructure):
 
     :param URIScheme: the URIScheme of the object
 
+    :param base_uri: the uri from which the uri of the object is derived
+
     :param uri: the uri of the object
 
     :param beginIndex: the start index in the context string
@@ -981,7 +1008,8 @@ class NifPhrase(NifStructure):
 
     def __init__(
         self,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         URIScheme: str = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
@@ -996,6 +1024,7 @@ class NifPhrase(NifStructure):
     ):
         super().__init__(
             URIScheme=URIScheme,
+            base_uri=base_uri,
             uri=uri,
             beginIndex=beginIndex,
             endIndex=endIndex,
@@ -1183,6 +1212,8 @@ class NifSentence(NifStructure):
 
     :param URIScheme: the URIScheme of the object
 
+    :param base_uri: the uri from which the uri of the object is derived
+
     :param uri: the uri of the object
 
     :param beginIndex: the start index in the context string
@@ -1190,6 +1221,8 @@ class NifSentence(NifStructure):
     :param endIndex: the end index in the context string
 
     :param referenceContext: the context to which the string refers
+
+    :param nifpages: the pages where the sentence occurs
 
     :param nextSentence: the next sentence in the context
 
@@ -1199,11 +1232,13 @@ class NifSentence(NifStructure):
 
     def __init__(
         self,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         URIScheme: str = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
         referenceContext: NifContext = None,
+        pages: List[NifPage] = None,
         nextSentence: Union[URIRef, str] = None,
         previousSentence: Union[URIRef, str] = None,
         words: List[Union[NifWord, URIRef]] = None,
@@ -1211,6 +1246,7 @@ class NifSentence(NifStructure):
     ):
         super().__init__(
             URIScheme=URIScheme,
+            base_uri=base_uri,
             uri=uri,
             beginIndex=beginIndex,
             endIndex=endIndex,
@@ -1220,6 +1256,7 @@ class NifSentence(NifStructure):
         self.set_nextSentence(nextSentence)
         self.set_previousSentence(previousSentence)
         self.set_Words(words)
+        self.set_pages(pages)
 
     def __str__(self):
         return self.__repr__()
@@ -1228,6 +1265,8 @@ class NifSentence(NifStructure):
         s = f"(nif:Sentence) uri = {self.uri}\n"
         if self.referenceContext is not None:
             s += f"  referenceContext : {self.referenceContext.uri}\n"
+        if self.pages is not None:
+            s += f'  pages : {", ".join([page.uri for page in self.pages])}\n'
         if self.beginIndex is not None:
             s += f"  beginIndex : {self.beginIndex}\n"
         if self.endIndex is not None:
@@ -1249,6 +1288,13 @@ class NifSentence(NifStructure):
         if self.lastWord is not None:
             s += f'  lastWord : "{self.lastWord.anchorOf}"\n'
         return s
+
+    @property
+    def pages(self):
+        if self._pages is not None:
+            return self._pages
+        else:
+            return None
 
     @property
     def nextSentence(self):
@@ -1301,6 +1347,19 @@ class NifSentence(NifStructure):
         else:
             self._words = None
 
+    def set_pages(self, pages: List[NifPage] = None):
+        if pages is not None:
+            self._pages = pages
+        else:
+            self._pages = None
+
+    def add_page(self, page: NifPage = None):
+        if page is not None:
+            if self._pages is None:
+                self._pages = [page]
+            else:
+                self._pages.append(page)
+
     def add_word(self, word: NifWord = None):
         if word is not None:
             if self._words is None:
@@ -1316,6 +1375,9 @@ class NifSentence(NifStructure):
             yield (self.uri, RDF.type, NIF.Sentence)
             for triple in super().triples():
                 yield triple
+            if self.pages is not None:
+                for page in self.pages:
+                    yield (self.uri, NIF.page, page.uri)
             if self.nextSentence is not None:
                 yield (self.uri, NIF.nextSentence, self.nextSentence.uri)
             if self.previousSentence is not None:
@@ -1324,9 +1386,10 @@ class NifSentence(NifStructure):
                 yield (self.uri, NIF.firstWord, self.firstWord.uri)
             if self.lastWord is not None:
                 yield (self.uri, NIF.lastWord, self.lastWord.uri)
-            for word in self._words:
-                for triple in word.triples():
-                    yield triple
+            if self._words is not None:
+                for word in self._words:
+                    for triple in word.triples():
+                        yield triple
 
     def load(
         self,
@@ -1363,6 +1426,8 @@ class NifParagraph(NifStructure):
 
     :param URIScheme: the URIScheme of the object
 
+    :param base_uri: the uri from which the uri of the object is derived
+
     :param uri: the uri of the object
 
     :param beginIndex: the start index in the context string
@@ -1376,7 +1441,8 @@ class NifParagraph(NifStructure):
     def __init__(
         self,
         URIScheme: str = None,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
         referenceContext: NifContext = None,
@@ -1384,6 +1450,7 @@ class NifParagraph(NifStructure):
     ):
         super().__init__(
             URIScheme=URIScheme,
+            base_uri=base_uri,
             uri=uri,
             beginIndex=beginIndex,
             endIndex=endIndex,
@@ -1423,6 +1490,8 @@ class NifPage(NifStructure):
 
     :param URIScheme: the URIScheme of the object
 
+    :param base_uri: the uri from which the uri of the object is derived
+
     :param uri: the uri of the object
 
     :param beginIndex: the start index in the context string
@@ -1438,7 +1507,8 @@ class NifPage(NifStructure):
     def __init__(
         self,
         URIScheme: str = None,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
         pageNumber: int = None,
@@ -1447,6 +1517,7 @@ class NifPage(NifStructure):
     ):
         super().__init__(
             URIScheme=URIScheme,
+            base_uri=base_uri,
             uri=uri,
             beginIndex=beginIndex,
             endIndex=endIndex,
@@ -1510,6 +1581,8 @@ class NifWord(NifStructure):
 
     :param URIScheme: the URIScheme of the object
 
+    :param base_uri: the uri from which the uri of the object is derived
+
     :param uri: the uri of the object
 
     :param beginIndex: the start index in the context string
@@ -1539,7 +1612,8 @@ class NifWord(NifStructure):
     def __init__(
         self,
         URIScheme: str = None,
-        uri: Union[URIRef, str] = None,
+        base_uri: URIRef = None,
+        uri: URIRef = None,
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
         referenceContext: NifContext = None,
@@ -1555,6 +1629,7 @@ class NifWord(NifStructure):
     ):
         super().__init__(
             URIScheme=URIScheme,
+            base_uri=base_uri,
             uri=uri,
             beginIndex=beginIndex,
             endIndex=endIndex,
