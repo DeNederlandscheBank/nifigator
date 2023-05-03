@@ -238,3 +238,7 @@ g = NifGraph(collection=collection)
 
 g.serialize("..//data//"+generate_uuid(uri=original_uri)+".ttl", format="turtle")
 ```
+
+```python
+
+```

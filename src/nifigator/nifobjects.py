@@ -922,7 +922,17 @@ class NifContext(NifString):
                         sentence.set_nextSentence(sentences[sent_idx + 1])
                     if sent_idx > 0:
                         sentence.set_previousSentence(sentences[sent_idx - 1])
-        
+
+            # set the pages of each sentence where it occurs
+            pages = self.pages
+            page_idx = 0
+            for sentence in self.sentences:
+                sentence.add_page(pages[page_idx])
+                if page_idx < len(pages)-1:
+                    while sentence.endIndex > pages[page_idx].endIndex:
+                        page_idx += 1
+                        sentence.add_page(pages[page_idx])
+
 
 class NifStructure(NifString):
     """
@@ -1212,6 +1222,8 @@ class NifSentence(NifStructure):
 
     :param referenceContext: the context to which the string refers
 
+    :param nifpages: the pages where the sentence occurs
+
     :param nextSentence: the next sentence in the context
 
     :param previousSentence: the previous sentence in the context
@@ -1226,6 +1238,7 @@ class NifSentence(NifStructure):
         beginIndex: Union[Literal, int] = None,
         endIndex: Union[Literal, int] = None,
         referenceContext: NifContext = None,
+        pages: List[NifPage] = None,
         nextSentence: Union[URIRef, str] = None,
         previousSentence: Union[URIRef, str] = None,
         words: List[Union[NifWord, URIRef]] = None,
@@ -1243,6 +1256,7 @@ class NifSentence(NifStructure):
         self.set_nextSentence(nextSentence)
         self.set_previousSentence(previousSentence)
         self.set_Words(words)
+        self.set_pages(pages)
 
     def __str__(self):
         return self.__repr__()
@@ -1251,6 +1265,8 @@ class NifSentence(NifStructure):
         s = f"(nif:Sentence) uri = {self.uri}\n"
         if self.referenceContext is not None:
             s += f"  referenceContext : {self.referenceContext.uri}\n"
+        if self.pages is not None:
+            s += f'  pages : {", ".join([page.uri for page in self.pages])}\n'
         if self.beginIndex is not None:
             s += f"  beginIndex : {self.beginIndex}\n"
         if self.endIndex is not None:
@@ -1272,6 +1288,13 @@ class NifSentence(NifStructure):
         if self.lastWord is not None:
             s += f'  lastWord : "{self.lastWord.anchorOf}"\n'
         return s
+
+    @property
+    def pages(self):
+        if self._pages is not None:
+            return self._pages
+        else:
+            return None
 
     @property
     def nextSentence(self):
@@ -1324,6 +1347,19 @@ class NifSentence(NifStructure):
         else:
             self._words = None
 
+    def set_pages(self, pages: List[NifPage] = None):
+        if pages is not None:
+            self._pages = pages
+        else:
+            self._pages = None
+
+    def add_page(self, page: NifPage = None):
+        if page is not None:
+            if self._pages is None:
+                self._pages = [page]
+            else:
+                self._pages.append(page)
+
     def add_word(self, word: NifWord = None):
         if word is not None:
             if self._words is None:
@@ -1339,6 +1375,9 @@ class NifSentence(NifStructure):
             yield (self.uri, RDF.type, NIF.Sentence)
             for triple in super().triples():
                 yield triple
+            if self.pages is not None:
+                for page in self.pages:
+                    yield (self.uri, NIF.page, page.uri)
             if self.nextSentence is not None:
                 yield (self.uri, NIF.nextSentence, self.nextSentence.uri)
             if self.previousSentence is not None:

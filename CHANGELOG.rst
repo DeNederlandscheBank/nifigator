@@ -40,3 +40,8 @@ Version 0.1.17 (2023-3-12)
 
 * Added page number to NIF
 * Added lexicon for NIF:lemma
+
+Version 0.1.18 (2023-5-3)
+=========================
+
+* Added page reference to NIF:Sentence
