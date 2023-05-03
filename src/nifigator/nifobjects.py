@@ -923,15 +923,16 @@ class NifContext(NifString):
                     if sent_idx > 0:
                         sentence.set_previousSentence(sentences[sent_idx - 1])
 
-            # set the pages of each sentence where it occurs
             pages = self.pages
-            page_idx = 0
-            for sentence in self.sentences:
-                sentence.add_page(pages[page_idx])
-                if page_idx < len(pages)-1:
-                    while sentence.endIndex > pages[page_idx].endIndex:
-                        page_idx += 1
-                        sentence.add_page(pages[page_idx])
+            if pages is not None:
+                # set the pages of each sentence where it occurs
+                page_idx = 0
+                for sentence in self.sentences:
+                    sentence.add_page(pages[page_idx])
+                    if page_idx < len(pages)-1:
+                        while sentence.endIndex > pages[page_idx].endIndex:
+                            page_idx += 1
+                            sentence.add_page(pages[page_idx])
 
 
 class NifStructure(NifString):
