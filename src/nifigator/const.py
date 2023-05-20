@@ -213,7 +213,7 @@ UD2OLIA_mappings = {
         "Form": "olia:FormalRegister",
         "Rare": None,
         "Slng": "olia:SlangRegister",
-        "Vrnc": None,
+        "Vrnc": "olia:DialectRegister", # possibly not correct
         "Vulg": "olia:VulgarRegister",
     },
     "Aspect": {"Perf": "olia:PerfectiveAspect", "Imp": "olia:ImperfectiveAspect"},
