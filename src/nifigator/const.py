@@ -22,6 +22,7 @@ NIF = Namespace("http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#
 NIF_ONTOLOGY = "http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/2.1"
 OLIA = Namespace("http://purl.org/olia/olia.owl#")
 ITSRDF = Namespace("http://www.w3.org/2005/11/its/rdf#")
+NIF2VEC = Namespace("http://mangosaurus.eu/ontology/nif2vec#")
 
 RDF = rdflib.namespace.RDF
 RDFS = rdflib.namespace.RDFS

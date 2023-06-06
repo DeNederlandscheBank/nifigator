@@ -45,3 +45,8 @@ Version 0.1.18 (2023-5-3)
 =========================
 
 * Added page reference to NIF:Sentence
+
+Version 0.1.19 (2023-6-6)
+=========================
+
+* Added NifVectorGraph

@@ -16,6 +16,7 @@ Contents
    Adding annotations <03_adding_annotations>
    Using a SPARQL endpoint <04_using a SPARQL endpoint>
    Using Ontolex-Lemon <05_using_a_lemon_termbase>
+   Creating and using a nifvec Graph <06_creating a nifvec graph>
    Contributions & Help <contributing>
    License <license>
    Authors <authors>
