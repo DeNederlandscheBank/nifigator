@@ -21,6 +21,7 @@ DEFAULT_PREFIX = "mangosaurus"
 
 from .lemonobjects import Lexicon
 
+
 class LemonGraph(Graph):
 
     """
@@ -206,9 +207,7 @@ class LemonGraph(Graph):
     #             collection.add_context(context=nif_context)
     #         return collection
 
-    def extract_lexicon(
-        self, lexicon_uri: URIRef = None
-    ):
+    def extract_lexicon(self, lexicon_uri: URIRef = None):
         lexicon = Lexicon(uri=collection_uri)
         return lexicon
 

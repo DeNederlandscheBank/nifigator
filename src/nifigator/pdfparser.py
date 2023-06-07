@@ -21,7 +21,9 @@ class PDFDocument:
     ):
         self.join_hyphenated_words = join_hyphenated_words
         self.control_characters_to_ignore = regex.compile(ignore_control_characters)
-        self.PDF_offset = namedtuple("PDF_offset", ["pageNumber", "beginIndex", "endIndex"])
+        self.PDF_offset = namedtuple(
+            "PDF_offset", ["pageNumber", "beginIndex", "endIndex"]
+        )
 
     def parse(
         self,
@@ -221,7 +223,7 @@ class PDFDocument:
                 # append corrected page offsets
                 page_offsets.append(
                     self.PDF_offset(
-                        idx+1,
+                        idx + 1,
                         page_start - page_start_correction,
                         page_end - page_end_correction,
                     )

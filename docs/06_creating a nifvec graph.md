@@ -12,13 +12,13 @@ jupyter:
     name: python3
 ---
 
-# Creating nifvec graph
+# Creating a nif2vec graph
 
 ```python
 import os, sys, logging
 logging.basicConfig(stream=sys.stdout, 
                     format='%(asctime)s %(message)s',
-                    level=logging.WARNING)
+                    level=logging.INFO)
 ```
 
 ```python
@@ -46,7 +46,7 @@ params = {
     "min_phrasecontext_count": 1
 }
 
-# the nifvec graph can be creaated from a NifGraph and a set of optional parameters
+# the nifvec graph can be created from a NifGraph and a set of optional parameters
 nifvec_graph = NifVecGraph(
     nif_graph=nif_graph, 
     params=params
@@ -75,4 +75,83 @@ for line in nifvec_graph.most_similar(phrase):
 ```console
 ('Pride and Prejudice', 0.0)
 ('War and Peace', 0.25)
+```
+
+```python
+# from nifigator import NifVecGraph, NifGraph
+
+# lang = 'en'
+
+# params = {
+#     "min_phrase_count": 2, 
+#     "min_context_count": 2,
+#     "min_phrasecontext_count": 2,
+#     "max_phrase_length": 4,
+#     "max_context_length": 2,
+# }
+# for j in range(1, 11):
+    
+#     # the nifvec graph can be created from a NifGraph and a set of optional parameters
+#     file = os.path.join("D:\\data\\dbpedia\\extracts", lang, "dbpedia_"+"{:04d}".format(j)+"_lang="+lang+".ttl")
+#     nifvec_graph = NifVecGraph(
+#         nif_graph=NifGraph(file=file),
+#         params=params
+#     )
+#     logging.info(".. Serializing graph")
+#     nifvec_graph.serialize(destination=os.path.join("D:\\data\\dbpedia\\nifvec\\", "nifvec_"+"{:04d}".format(j)+"_lang="+lang+".xml"), format="xml")
+```
+
+# querying the nif2vec graph
+
+```python
+from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as default
+from nifigator import NifVecGraph
+
+# Connect to triplestore
+store = SPARQLUpdateStore()
+query_endpoint = 'http://localhost:3030/nif2vec_en/sparql'
+update_endpoint = 'http://localhost:3030/nif2vec_en/update'
+store.open((query_endpoint, update_endpoint))
+
+# create NifVecGraph with this store
+g = NifVecGraph(store=store, identifier=default)
+```
+
+```python
+
+```
+
+```python
+# most frequent contexts of the word "has"
+
+g.phrase_contexts("has", topn=10)
+```
+
+```python
+# top phrase similarities of the word "has"
+
+g.most_similar("has", topn=10)
+```
+
+```python
+# top phrase similarities of the word "King"
+
+g.most_similar("King", topn=15)
+```
+
+```python
+# simple masks
+
+context = ("King", "of England")
+for r in g.context_words(context):
+    print(r)
+```
+
+```python
+
+```
+
+```python
+
 ```

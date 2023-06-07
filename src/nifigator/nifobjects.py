@@ -220,19 +220,19 @@ class NifString(NifBase):
             if self._base_uri is not None:
                 base_uri = self._base_uri.replace("&nif=context", "")
                 if isinstance(self, NifContext):
-                    uri = base_uri+"&nif=context"
+                    uri = base_uri + "&nif=context"
                 elif isinstance(self, NifContextCollection):
-                    uri = base_uri+"&nif=collection"
+                    uri = base_uri + "&nif=collection"
                 elif isinstance(self, NifPage):
-                    uri = base_uri+"&nif=page"
+                    uri = base_uri + "&nif=page"
                 elif isinstance(self, NifParagraph):
-                    uri = base_uri+"&nif=paragraph"
+                    uri = base_uri + "&nif=paragraph"
                 elif isinstance(self, NifSentence):
-                    uri = base_uri+"&nif=sentence"
+                    uri = base_uri + "&nif=sentence"
                 elif isinstance(self, NifPhrase):
-                    uri = base_uri+"&nif=phrase"
+                    uri = base_uri + "&nif=phrase"
                 elif isinstance(self, NifWord):
-                    uri = base_uri+"&nif=word"
+                    uri = base_uri + "&nif=word"
                 if not isinstance(self, NifContext):
                     if self.URIScheme == RFC5147String:
                         uri = (
@@ -242,14 +242,10 @@ class NifString(NifBase):
                             + ","
                             + str(self.endIndex)
                         )
-                    else: 
+                    else:
                         # default is OffsetBasedString:
                         uri = (
-                            uri
-                            + "_"
-                            + str(self.beginIndex)
-                            + "_"
-                            + str(self.endIndex)
+                            uri + "_" + str(self.beginIndex) + "_" + str(self.endIndex)
                         )
         super().set_uri(uri=uri)
 
@@ -592,7 +588,6 @@ class NifContext(NifString):
         """
         return self._lexicon
 
-
     def set_lexicon(self, lexicon: URIRef = None):
         """
         Sets the lexicon base uri for lemmas
@@ -768,7 +763,7 @@ class NifContext(NifString):
                     URIScheme=self.URIScheme,
                     uri=page_uri,
                     referenceContext=self,
-                    pageNumber=idx+1,
+                    pageNumber=idx + 1,
                     graph=self.graph,
                 )
                 for idx, page_uri in enumerate(page_uris)
@@ -929,7 +924,7 @@ class NifContext(NifString):
                 page_idx = 0
                 for sentence in self.sentences:
                     sentence.add_page(pages[page_idx])
-                    if page_idx < len(pages)-1:
+                    if page_idx < len(pages) - 1:
                         while sentence.endIndex > pages[page_idx].endIndex:
                             page_idx += 1
                             sentence.add_page(pages[page_idx])
@@ -1900,7 +1895,9 @@ class NifWord(NifStructure):
                 if self.referenceContext.lexicon is not None:
                     # prevent that uribaker converts this to underscore
                     lemma = self._lemma.replace('"', "%22")
-                    lemma_uri = URIRef(iribaker.to_iri(str(self.referenceContext.lexicon)+lemma))
+                    lemma_uri = URIRef(
+                        iribaker.to_iri(str(self.referenceContext.lexicon) + lemma)
+                    )
                     yield (self.uri, NIF.lemma, lemma_uri)
                 else:
                     yield (self.uri, NIF.lemma, self._lemma)

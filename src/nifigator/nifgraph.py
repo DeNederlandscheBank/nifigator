@@ -346,9 +346,9 @@ class NifGraph(Graph):
     ):
         collection = NifContextCollection(uri=collection_uri)
         for context_uri in context_uris:
-            nif_context = NifContext(URIScheme=self.URIScheme, 
-                                     graph=self,
-                                     uri=context_uri).load()
+            nif_context = NifContext(
+                URIScheme=self.URIScheme, graph=self, uri=context_uri
+            ).load()
             collection.add_context(context=nif_context)
         return collection
 
@@ -444,8 +444,10 @@ class NifGraph(Graph):
     @property
     def lexicon(self):
         """ """
-        def noNumber(s: str=""):
-            return not s.replace('.', '', 1).replace(',', '', 1).isdigit()
+
+        def noNumber(s: str = ""):
+            return not s.replace(".", "", 1).replace(",", "", 1).isdigit()
+
         # query for all anchorOfs of all word with optional lemma
         if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
             q = (
@@ -453,8 +455,8 @@ class NifGraph(Graph):
                 SELECT ?anchor ?lemma ?pos ?lang
                 WHERE {
                     SERVICE <"""
-                    + graph.store.query_endpoint
-                    + """>
+                + graph.store.query_endpoint
+                + """>
                     {
                         ?w rdf:type nif:Word .
                         ?w nif:anchorOf ?anchor .
@@ -466,8 +468,7 @@ class NifGraph(Graph):
                 }"""
             )
         else:
-            q = (
-                """
+            q = """
                 SELECT ?anchor ?lemma ?pos ?lang
                 WHERE {
                     ?w rdf:type nif:Word .
@@ -478,54 +479,51 @@ class NifGraph(Graph):
                     OPTIONAL {?context dc:language ?lang }
                 }
             """
-            )
         # execute the query
         results = self.query(q)
 
         lexica = dict()
 
         for anchorOf, lemma, pos, lang in results:
-
             if lemma is not None and noNumber(lemma):
-
                 # default language is "en"
                 if lang is None:
                     lang = "en"
 
                 # construct lexicon if necessary
                 if lang not in lexica.keys():
-                    lexica[lang] = Lexicon(uri=URIRef(DEFAULT_URI+"lexicon/"+lang)) 
+                    lexica[lang] = Lexicon(uri=URIRef(DEFAULT_URI + "lexicon/" + lang))
                     lexica[lang].set_language(lang)
 
-                
                 # derive lexical entry uri from the lemma
                 if not isinstance(lemma, URIRef):
-                    entry_uri = to_iri(str(lexica[lang].uri)+"/"+lemma)
+                    entry_uri = to_iri(str(lexica[lang].uri) + "/" + lemma)
                 else:
                     entry_uri = lemma
 
                 # create the lexical entry
-                entry = LexicalEntry(
-                    uri=entry_uri,
-                    language=lexica[lang].language
-                )
+                entry = LexicalEntry(uri=entry_uri, language=lexica[lang].language)
 
                 # set canonicalForm (this is the lemma)
                 entry.set_canonicalForm(
                     Form(
                         uri=URIRef(entry_uri),
                         formVariant="canonicalForm",
-                        writtenReps=[lemma])
+                        writtenReps=[lemma],
                     )
+                )
 
                 # set otherForm if the anchorOf is not the same as the lemma
                 if anchorOf.value != lemma.value:
-                    entry.set_otherForms([
-                        Form(
-                            uri=URIRef(entry_uri),
-                            formVariant="otherForm",
-                            writtenReps=[anchorOf]
-                        )])
+                    entry.set_otherForms(
+                        [
+                            Form(
+                                uri=URIRef(entry_uri),
+                                formVariant="otherForm",
+                                writtenReps=[anchorOf],
+                            )
+                        ]
+                    )
 
                 # set part of speech if it exists
                 if pos is not None:

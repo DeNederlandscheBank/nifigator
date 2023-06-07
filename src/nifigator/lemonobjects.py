@@ -69,9 +69,7 @@ class LemonElement(object):
 
     """
 
-    def __init__(self, 
-                 uri: URIRef = None, 
-                 property: URIRef = None):
+    def __init__(self, uri: URIRef = None, property: URIRef = None):
         self.set_uri(uri)
         self.set_property(property)
 
