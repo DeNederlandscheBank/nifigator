@@ -101,7 +101,10 @@ for line in nifvec_graph.most_similar(phrase):
 #     nifvec_graph.serialize(destination=os.path.join("D:\\data\\dbpedia\\nifvec\\", "nifvec_"+"{:04d}".format(j)+"_lang="+lang+".xml"), format="xml")
 ```
 
-# querying the nif2vec graph
+## Querying the nif2vec graph
+
+
+These are results of a nif2vec graph created with 15.000 DBpedia pages.
 
 ```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
@@ -114,42 +117,100 @@ query_endpoint = 'http://localhost:3030/nif2vec_en/sparql'
 update_endpoint = 'http://localhost:3030/nif2vec_en/update'
 store.open((query_endpoint, update_endpoint))
 
-# create NifVecGraph with this store
+# Create NifVecGraph with this store
 g = NifVecGraph(store=store, identifier=default)
 ```
 
-```python
-
-```
+### Most frequent contexts
 
 ```python
 # most frequent contexts of the word "has"
-
 g.phrase_contexts("has", topn=10)
 ```
 
+This results in
+
+```console
+[(('it', 'been'), 1429),
+ (('It', 'been'), 1353),
+ (('SENTSTART+It', 'been'), 1234),
+ (('and', 'been'), 579),
+ (('which', 'been'), 556),
+ (('there', 'been'), 516),
+ (('also', 'a'), 509),
+ (('and', 'a'), 479),
+ (('that', 'been'), 451),
+ (('which', 'a'), 375)]
+```
+
+This means that the corpus contains 1429 occurrences of 'it has been', i.e. occurrences where the word 'has' occurred in the context ('it', 'been').
+
+SENTSTART and SENTEND are tokens to indicate the start and end of a sentence.
+
+
+### Top phrase similarities
+
 ```python
 # top phrase similarities of the word "has"
+g.most_similar("has", topn=10, topcontexts=15)
+```
 
-g.most_similar("has", topn=10)
+This results in
+
+```console
+[('had', 0.0),
+ ('has', 0.0),
+ ('may have', 0.2666666666666667),
+ ('would have', 0.2666666666666667),
+ ('have', 0.33333333333333337),
+ ('has also', 0.4666666666666667),
+ ('has never', 0.4666666666666667),
+ ('has not', 0.4666666666666667),
+ ('must have', 0.4666666666666667),
+ ('also has', 0.5333333333333333)]
 ```
 
 ```python
 # top phrase similarities of the word "King"
-
-g.most_similar("King", topn=15)
+g.most_similar("King", topn=10, topcontexts=15)
 ```
 
-```python
-# simple masks
+This results in
 
+```console
+[('King', 0.0),
+ ('Emperor', 0.4666666666666667),
+ ('Prince', 0.4666666666666667),
+ ('President', 0.5333333333333333),
+ ('Queen', 0.5333333333333333),
+ ('State', 0.5333333333333333),
+ ('king', 0.5333333333333333),
+ ('Chancellor', 0.6),
+ ('Church', 0.6),
+ ('City', 0.6)]
+```
+
+
+### Simple 'masks'
+
+```python
+# simple 'masks'
 context = ("King", "of England")
-for r in g.context_words(context):
+for r in g.context_words(context, topn=10):
     print(r)
 ```
 
-```python
-
+```console
+('Henry VIII', 11)
+('Edward I', 10)
+('Edward III', 6)
+('Charles II', 5)
+('Edward IV', 5)
+('Henry III', 5)
+('Henry VII', 5)
+('James I', 5)
+('John', 5)
+('Richard I', 4)
 ```
 
 ```python
