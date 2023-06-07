@@ -50,3 +50,9 @@ Version 0.1.19 (2023-6-6)
 =========================
 
 * Added NifVectorGraph
+
+Version 0.1.20 (2023-6-7)
+=========================
+
+* Improvements to NifVectorGraph
+* Parsed code with Black
