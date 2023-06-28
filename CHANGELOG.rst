@@ -56,3 +56,8 @@ Version 0.1.20 (2023-6-7)
 
 * Improvements to NifVectorGraph
 * Parsed code with Black
+
+Version 0.1.21 (2023-6-28)
+=========================
+
+* Word filter added to NifVectorGraph
