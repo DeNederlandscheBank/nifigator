@@ -15,7 +15,7 @@ from .const import (
     RDF,
     XSD,
     NIF,
-    NIF2VEC,
+    NIFVEC,
 )
 from .utils import tokenizer
 from .nifgraph import NifGraph
@@ -30,7 +30,7 @@ MAX_PHRASE_LENGTH = "max_phrase_length"
 MAX_CONTEXT_LENGTH = "max_context_length"
 CONTEXT_SEPARATOR = "context_separator"
 PHRASE_SEPARATOR = "phrase_separator"
-
+WORDS_FILTER = "words_filter"
 
 def to_iri(s: str = ""):
     return (
@@ -44,11 +44,31 @@ def to_iri(s: str = ""):
     )
 
 
-class NifVecGraph(Graph):
+class NifVectorGraph(Graph):
+    """
+    A NIF Vector graph
+
+    :param nif_graph: the graph from which to construct the NIF Vector graph (optional)
+
+    :param context_uris: the context uris of the contexts used with the nif_graph to construct the NIF Vector graph
+
+    :param documents: the documents from which to construct the NIF Vector graph (optional)
+
+    :param lexicon: the namespace of the lexicon (words and phrases in the text)
+
+    :param window: the namespace of the windows (context-phrase combinations in the text)
+
+    :param context: the namespace of the contexts
+
+    :param params: dictionary with parameters for constructing the NIF Vector graph
+
+    """
+
     def __init__(
         self,
         nif_graph: NifGraph = None,
         context_uris: list = None,
+        documents: list = None,
         lexicon: Namespace = None,
         window: Namespace = None,
         context: Namespace = None,
@@ -59,7 +79,7 @@ class NifVecGraph(Graph):
         base: Optional[str] = None,
         bind_namespaces: str = "core",
     ):
-        super(NifVecGraph, self).__init__(
+        super(NifVectorGraph, self).__init__(
             store=store,
             identifier=identifier,
             namespace_manager=namespace_manager,
@@ -74,7 +94,15 @@ class NifVecGraph(Graph):
         self.context_separator = params.get(CONTEXT_SEPARATOR, "_")
         self.phrase_separator = params.get(PHRASE_SEPARATOR, "+")
 
-        self.bind("nif2vec", NIF2VEC)
+        words_filter = params.get(WORDS_FILTER, None)
+        if words_filter is not None:
+            self.words_filter = words_filter
+            # reformulate to dict for efficiency
+            self.words_filter["data"] = {phrase: True for phrase in words_filter["data"]}
+        else:
+            self.words_filter = None
+
+        self.bind("nifvec", NIFVEC)
         self.bind("nif", NIF)
 
         if lexicon is None:
@@ -87,9 +115,22 @@ class NifVecGraph(Graph):
             self.context_ns = Namespace(DEFAULT_URI + "context/")
         self.bind("context", self.context_ns)
 
-        if nif_graph is not None:
+        if documents is None and nif_graph is not None:
+            logging.info(".. Extracting text from graph")
+            if context_uris is None or context_uris == []:
+                context_uris = [
+                    c[0] for c in list(nif_graph.triples([None, RDF.type, NIF.Context]))
+                ]
+            for context_uri in context_uris:
+                documents = [
+                    d[2]
+                    for d in nif_graph.triples([context_uri, NIF.isString, None])
+                    if len(d) > 0
+                ]
+
+        if documents is not None:
             logging.info(".. Creating windows dict")
-            windows = self.generate_windows(g=nif_graph, context_uris=context_uris)
+            windows = self.generate_windows(documents=documents)
             logging.info(".. Creating phrase and context dicts")
             phrase_count, context_count = self.create_window_phrase_count_dicts(
                 windows=windows
@@ -103,17 +144,17 @@ class NifVecGraph(Graph):
     def generate_triples(
         self, windows: dict = {}, phrase_count: dict = {}, context_count: dict = {}
     ):
+        """ """
         for phrase in phrase_count.keys():
             phrase_uri = URIRef(self.lexicon_ns + to_iri(phrase))
             yield ((phrase_uri, RDF.type, NIF.Phrase))
             yield (
                 (
                     phrase_uri,
-                    NIF2VEC.hasCount,
+                    NIFVEC.hasCount,
                     Literal(phrase_count[phrase], datatype=XSD.nonNegativeInteger),
                 )
             )
-
         for context in context_count.keys():
             context_uri = URIRef(
                 self.context_ns
@@ -121,15 +162,14 @@ class NifVecGraph(Graph):
                 + self.context_separator
                 + to_iri(context[1])
             )
-            yield ((context_uri, RDF.type, NIF2VEC.Context))
+            yield ((context_uri, RDF.type, NIFVEC.Context))
             yield (
                 (
                     context_uri,
-                    NIF2VEC.hasCount,
+                    NIFVEC.hasCount,
                     Literal(context_count[context], datatype=XSD.nonNegativeInteger),
                 )
             )
-
         for phrase in windows.keys():
             for window in windows[phrase]:
                 count = windows[phrase][window]
@@ -145,19 +185,20 @@ class NifVecGraph(Graph):
                     + self.context_separator
                     + n
                 )
-
-                yield ((phrase_uri, NIF2VEC.occursIn, window_uri))
-                yield ((context_uri, NIF2VEC.occursIn, window_uri))
-                yield ((window_uri, RDF.type, NIF2VEC.Window))
-                yield ((window_uri, NIF2VEC.hasContext, context_uri))
-                yield ((window_uri, NIF2VEC.hasPhrase, phrase_uri))
+                yield ((phrase_uri, NIFVEC.isPhraseOf, window_uri))
+                yield ((context_uri, NIFVEC.isContextOf, window_uri))
+                yield ((window_uri, RDF.type, NIFVEC.Window))
+                yield ((window_uri, NIFVEC.hasContext, context_uri))
+                yield ((window_uri, NIFVEC.hasPhrase, phrase_uri))
                 yield (
                     (
                         window_uri,
-                        NIF2VEC.hasCount,
+                        NIFVEC.hasCount,
                         Literal(count, datatype=XSD.nonNegativeInteger),
                     )
                 )
+                if self.words_filter is not None:
+                    yield ((window_uri, NIFVEC.hasFilter, Literal(self.words_filter["name"], datatype=XSD.string)))
 
     def create_window_phrase_count_dicts(self, windows: dict = {}):
         """ """
@@ -195,30 +236,27 @@ class NifVecGraph(Graph):
 
         return phrase_count, context_count
 
-    def generate_windows(self, g: NifGraph = None, context_uris: list = None):
+    def generate_windows(self, documents: list = None):
         """ """
-        collection = g.collection
-
-        if context_uris is None:
-            context_uris = [c.uri for c in collection.contexts]
-        contexts = [c for c in collection.contexts if c.uri in context_uris]
-
         windows = {}
-
-        for context in contexts:
-            tokenized_text = tokenizer(context.isString)
-
+        for document in documents:
+            tokenized_text = tokenizer(document)
             for tok_sentence in tokenized_text:
+                # delete phrases in sentence if enabled
+                if self.words_filter is not None:
+                    sentence = [word for word in tok_sentence if self.words_filter["data"].get(word["text"], None) is None]
+                else:
+                    sentence = tok_sentence
+                # perform regex selection of sentence
                 sentence = (
                     ["SENTSTART"]
                     + [
                         word["text"]
-                        for word in tok_sentence
+                        for word in sentence
                         if re.match("^[0-9]*[a-zA-Z]*$", word["text"])
                     ]
                     + ["SENTEND"]
                 )
-
                 for idx, word in enumerate(sentence):
                     for phrase_length in range(1, self.max_phrase_length + 1):
                         for pre_length in range(1, self.max_context_length + 1):
@@ -266,9 +304,9 @@ class NifVecGraph(Graph):
         {
             """
             + phrase_uri
-            + """ nif2vec:occursIn ?w .
-            ?w nif2vec:hasContext ?c .
-            ?w nif2vec:hasCount ?count .
+            + """ nifvec:isPhraseOf ?w .
+            ?w nifvec:hasContext ?c .
+            ?w nifvec:hasCount ?count .
         }
     }
     GROUP BY ?c
@@ -277,10 +315,10 @@ class NifVecGraph(Graph):
         )
         if topn is not None:
             q += "LIMIT " + str(topn) + "\n"
-        results = [
-            (tuple(r[0].split("/")[-1].split(self.context_separator)), r[1].value)
+        results = {
+            tuple(r[0].split("/")[-1].split(self.context_separator)): r[1].value
             for r in self.query(q)
-        ]
+        }
         return results
 
     def most_similar(self, phrase: str = "", topn: int = 15, topcontexts: int = 25):
@@ -303,9 +341,9 @@ class NifVecGraph(Graph):
                 {
                     """
             + phrase_uri
-            + """ nif2vec:occursIn ?w .
-                    ?w nif2vec:hasContext ?c .
-                    ?w nif2vec:hasCount ?count .
+            + """ nifvec:isPhraseOf ?w .
+                    ?w nifvec:hasContext ?c .
+                    ?w nifvec:hasCount ?count .
                 }
                 GROUP BY ?c
                 ORDER BY DESC(?n)
@@ -313,9 +351,8 @@ class NifVecGraph(Graph):
             + str(topcontexts)
             + """
             }
-            ?c nif2vec:occursIn ?w1 .
-            ?word nif2vec:occursIn ?w1 .
-            ?word rdf:type nif:Phrase .
+            ?c nifvec:isContextOf ?w1 .
+            ?word nifvec:isPhraseOf ?w1 .
         }
     }
     GROUP BY ?word
@@ -326,13 +363,11 @@ class NifVecGraph(Graph):
             q += "LIMIT " + str(topn) + "\n"
         results = [item for item in self.query(q)]
         norm = results[0][1].value
-        results = [
-            (
-                r[0].split("/")[-1].replace(self.phrase_separator, " "),
-                1 - r[1].value / norm,
-            )
+        results = {
+            r[0].split("/")[-1].replace(self.phrase_separator, " "): 1
+            - r[1].value / norm
             for r in results
-        ]
+        }
         return results
 
     # def df_words_contexts(self, word: str=None, topn=7, topcontexts=10):
@@ -368,10 +403,9 @@ class NifVecGraph(Graph):
         {
             """
             + context_uri
-            + """ nif2vec:occursIn ?window .
-            ?window nif2vec:hasCount ?s .
-            ?word nif2vec:occursIn ?window .
-            ?word rdf:type nif:Phrase .
+            + """ nifvec:isContextOf ?window .
+            ?window nifvec:hasCount ?s .
+            ?word nifvec:isPhraseOf ?window .
         }
     }
     GROUP BY ?word
@@ -380,8 +414,8 @@ class NifVecGraph(Graph):
         )
         if topn is not None:
             q += "LIMIT " + str(topn) + "\n"
-        results = [
-            (r[0].split("/")[-1].replace(self.phrase_separator, " "), r[1].value)
+        results = {
+            r[0].split("/")[-1].replace(self.phrase_separator, " "): r[1].value
             for r in self.query(q)
-        ]
+        }
         return results

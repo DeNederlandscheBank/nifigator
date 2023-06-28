@@ -19,15 +19,19 @@
 Nifigator
 =========
 
-Nifigator is a pure Python package for working with NLP in RDF. It uses the `NLP Interchange Format (NIF) <https://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/nif-core.html>`_ and is build on top of `RDFLib <https://github.com/RDFLib/rdflib>`_. Here is what is does:
+Nifigator is a pure Python package for working with NLP in RDF. It uses the `NLP Interchange Format (NIF) <https://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core/nif-core.html>`_ and is build on top of `RDFLib <https://github.com/RDFLib/rdflib>`_. 
 
-* Convert data from text documents to NIF data
+Here is what is does:
+
+* Convert data from text documents to NIF data in RDF
 
   - Currently supported formats: txt, PDF (text, page and paragraph offsets)
 
 * Add linguistic annotations from NLP processors
 
-  - Currently supported processors: `Stanza <https://stanfordnlp.github.io/stanza/>`_
+  - Currently supported processor: `Stanza <https://stanfordnlp.github.io/stanza/>`_
+
+* Create NIF Vector graph to find phrase and sentences similarities
 
 * RDFLib is used to serialize and deserialize NIF data.
 
