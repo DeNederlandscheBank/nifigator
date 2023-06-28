@@ -32,6 +32,7 @@ CONTEXT_SEPARATOR = "context_separator"
 PHRASE_SEPARATOR = "phrase_separator"
 WORDS_FILTER = "words_filter"
 
+
 def to_iri(s: str = ""):
     return (
         s.replace('"', "%22")
@@ -98,7 +99,9 @@ class NifVectorGraph(Graph):
         if words_filter is not None:
             self.words_filter = words_filter
             # reformulate to dict for efficiency
-            self.words_filter["data"] = {phrase: True for phrase in words_filter["data"]}
+            self.words_filter["data"] = {
+                phrase: True for phrase in words_filter["data"]
+            }
         else:
             self.words_filter = None
 
@@ -198,7 +201,13 @@ class NifVectorGraph(Graph):
                     )
                 )
                 if self.words_filter is not None:
-                    yield ((window_uri, NIFVEC.hasFilter, Literal(self.words_filter["name"], datatype=XSD.string)))
+                    yield (
+                        (
+                            window_uri,
+                            NIFVEC.hasFilter,
+                            Literal(self.words_filter["name"], datatype=XSD.string),
+                        )
+                    )
 
     def create_window_phrase_count_dicts(self, windows: dict = {}):
         """ """
@@ -244,7 +253,11 @@ class NifVectorGraph(Graph):
             for tok_sentence in tokenized_text:
                 # delete phrases in sentence if enabled
                 if self.words_filter is not None:
-                    sentence = [word for word in tok_sentence if self.words_filter["data"].get(word["text"], None) is None]
+                    sentence = [
+                        word
+                        for word in tok_sentence
+                        if self.words_filter["data"].get(word["text"], None) is None
+                    ]
                 else:
                     sentence = tok_sentence
                 # perform regex selection of sentence
