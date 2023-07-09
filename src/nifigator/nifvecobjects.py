@@ -27,7 +27,10 @@ MIN_PHRASE_COUNT = "min_phrase_count"
 MIN_CONTEXT_COUNT = "min_context_count"
 MIN_PHRASECONTEXT_COUNT = "min_phrasecontext_count"
 MAX_PHRASE_LENGTH = "max_phrase_length"
-MAX_CONTEXT_LENGTH = "max_context_length"
+MAX_LEFT_LENGTH = "max_left_length"
+MAX_RIGHT_LENGTH = "max_right_length"
+MIN_LEFT_LENGTH = "min_left_length"
+MIN_RIGHT_LENGTH = "min_right_length"
 CONTEXT_SEPARATOR = "context_separator"
 PHRASE_SEPARATOR = "phrase_separator"
 WORDS_FILTER = "words_filter"
@@ -87,11 +90,15 @@ class NifVectorGraph(Graph):
             base=base,
             bind_namespaces=bind_namespaces,
         )
-        self.min_phrase_count = params.get(MIN_PHRASE_COUNT, 5)
-        self.min_context_count = params.get(MIN_CONTEXT_COUNT, 5)
-        self.min_phrasecontext_count = params.get(MIN_PHRASECONTEXT_COUNT, 4)
-        self.max_phrase_length = params.get(MAX_PHRASE_LENGTH, 4)
-        self.max_context_length = params.get(MAX_CONTEXT_LENGTH, 4)
+        self.params = params
+
+        {
+            "max_phrase_length": params.get(MAX_PHRASE_LENGTH, 4),
+            "max_left_length": params.get(MAX_LEFT_LENGTH, 2),
+            "max_right_length": params.get(MAX_RIGHT_LENGTH, 2),
+            "min_left_length": params.get(MIN_LEFT_LENGTH, 1),
+            "min_right_length": params.get(MIN_RIGHT_LENGTH, 1),
+        }
         self.context_separator = params.get(CONTEXT_SEPARATOR, "_")
         self.phrase_separator = params.get(PHRASE_SEPARATOR, "+")
 
@@ -211,11 +218,15 @@ class NifVectorGraph(Graph):
 
     def create_window_phrase_count_dicts(self, windows: dict = {}):
         """ """
+        min_phrasecontext_count = self.params.get("min_phrasecontext_count", 5)
+        min_phrase_count = self.params.get("min_phrase_count", 5)
+        min_context_count = self.params.get("min_context_count", 5)
+
         # delete phrasewindow with number of occurrence < MIN_PHRASECONTEXT_COUNT
         to_delete = []
         for d_phrase in windows.keys():
             for d_window in windows[d_phrase].keys():
-                if windows[d_phrase][d_window] < self.min_phrasecontext_count:
+                if windows[d_phrase][d_window] < min_phrasecontext_count:
                     to_delete.append((d_phrase, d_window))
         for item in to_delete:
             del windows[item[0]][item[1]]
@@ -231,14 +242,14 @@ class NifVectorGraph(Graph):
 
         # delete phrases with number of occurrence < MIN_PHRASE_COUNT
         to_delete = [
-            p for p in phrase_count.keys() if phrase_count[p] < self.min_phrase_count
+            p for p in phrase_count.keys() if phrase_count[p] < min_phrase_count
         ]
         for item in to_delete:
             del phrase_count[item]
 
         # delete windows with number of occurrence < MIN_CONTEXT_COUNT
         to_delete = [
-            c for c in context_count.keys() if context_count[c] < self.min_context_count
+            c for c in context_count.keys() if context_count[c] < min_context_count
         ]
         for item in to_delete:
             del context_count[item]
@@ -249,56 +260,18 @@ class NifVectorGraph(Graph):
         """ """
         windows = {}
         for document in documents:
-            tokenized_text = tokenizer(document)
-            for tok_sentence in tokenized_text:
-                # delete phrases in sentence if enabled
-                if self.words_filter is not None:
-                    sentence = [
-                        word
-                        for word in tok_sentence
-                        if self.words_filter["data"].get(word["text"], None) is None
-                    ]
-                else:
-                    sentence = tok_sentence
-                # perform regex selection of sentence
-                sentence = (
-                    ["SENTSTART"]
-                    + [
-                        word["text"]
-                        for word in sentence
-                        if re.match("^[0-9]*[a-zA-Z]*$", word["text"])
-                    ]
-                    + ["SENTEND"]
-                )
-                for idx, word in enumerate(sentence):
-                    for phrase_length in range(1, self.max_phrase_length + 1):
-                        for pre_length in range(1, self.max_context_length + 1):
-                            for post_length in range(1, self.max_context_length + 1):
-                                if (
-                                    idx >= pre_length
-                                    and idx
-                                    <= len(sentence) - phrase_length - post_length
-                                ):
-                                    pre_phrase = self.phrase_separator.join(
-                                        sentence[idx - pre_length + i]
-                                        for i in range(0, pre_length)
-                                    )
-                                    phrase = self.phrase_separator.join(
-                                        sentence[idx + i]
-                                        for i in range(0, phrase_length)
-                                    )
-                                    post_phrase = self.phrase_separator.join(
-                                        sentence[idx + phrase_length + i]
-                                        for i in range(0, post_length)
-                                    )
-
-                                    c = (pre_phrase, post_phrase)
-
-                                    if windows.get(phrase, None) is None:
-                                        windows[phrase] = defaultdict(int)
-
-                                    windows[phrase][c] += 1
-
+            sentences = [
+                [word["text"] for word in sentence] for sentence in tokenizer(document)
+            ]
+            for phrase, context in generate_phrase_context(
+                sentences=sentences,
+                words_filter=self.words_filter,
+                phrase_separator=self.phrase_separator,
+                params=self.params,
+            ):
+                if windows.get(phrase, None) is None:
+                    windows[phrase] = defaultdict(int)
+                windows[phrase][context] += 1
         return windows
 
     def phrase_contexts(self, phrase: str = "", topn: int = 15):
@@ -383,22 +356,25 @@ class NifVectorGraph(Graph):
         }
         return results
 
-    # def df_words_contexts(self, word: str=None, topn=7, topcontexts=10):
-    #     """
-    #     """
-    #     columns = [s[0] for s in self.word_contexts(word, topn=topcontexts)]
+    def dict_phrases_contexts(
+        g, word: str = None, topn: int = 7, topcontexts: int = 10
+    ):
+        """ """
+        contexts = g.phrase_contexts(word, topn=topcontexts)
+        phrases = g.most_similar(word, topn=topn)
+        d = {
+            "index": phrases.keys(),
+            "columns": contexts.keys(),
+            "data": [],
+            "index_names": ["phrase"],
+            "column_names": ["left context phrase", "right context phrase"],
+        }
+        for phrase in phrases:
+            phrase_contexts = g.phrase_contexts(phrase, topn=None)
+            d["data"].append([phrase_contexts.get(c, 0) for c in contexts.keys()])
+        return d
 
-    #     index = [line[0] for line in self.similar_words(word, topn=topn)]
-    #     df = pd.DataFrame(columns=columns,
-    #                       index=index)
-    #     df.fillna(0, inplace=True)
-    #     for idx in index:
-    #         for c in self.word_contexts(idx, topn = None):
-    #             if c[0] in columns:
-    #                 df.at[idx, c[0]] = c[1]
-    #     return df
-
-    def context_words(self, context: list = None, topn: int = 15):
+    def context_phrases(self, context: list = None, topn: int = 15):
         """ """
         context = (
             self.phrase_separator.join(context[0].split(" ")),
@@ -406,7 +382,7 @@ class NifVectorGraph(Graph):
         )
         context_uri = "<" + self.context_ns + self.context_separator.join(context) + ">"
         q = """
-    SELECT distinct ?word (sum(?s) as ?num)
+    SELECT distinct ?phrase (sum(?s) as ?num)
     WHERE
     {\n"""
         if not isinstance(self.store, memory.Memory):
@@ -418,10 +394,10 @@ class NifVectorGraph(Graph):
             + context_uri
             + """ nifvec:isContextOf ?window .
             ?window nifvec:hasCount ?s .
-            ?word nifvec:isPhraseOf ?window .
+            ?phrase nifvec:isPhraseOf ?window .
         }
     }
-    GROUP BY ?word
+    GROUP BY ?phrase
     ORDER BY DESC(?num)
     """
         )
@@ -432,3 +408,101 @@ class NifVectorGraph(Graph):
             for r in self.query(q)
         }
         return results
+
+
+class NifVector(dict):
+    def __init__(self, *args, **kwargs):
+        self.update(*args, **kwargs)
+        self = {
+            k: v
+            for k, v in sorted(self.items(), reverse=True, key=lambda item: item[1])
+        }
+
+    def __sub__(self, other):
+        for item in other.keys():
+            if item in self.keys():
+                del self[item]
+        self = NifVector(self)
+        return self
+
+    def __add__(self, other):
+        d = NifVector()
+        for item in self.keys():
+            if item in other.keys():
+                d[item] = other[item] + self[item]
+        self = NifVector(d)
+        return self
+
+    def __and__(self, other):
+        return self + other
+
+    def __or__(self, other):
+        for item in other.keys():
+            if item in self.keys():
+                self[item] += other[item]
+            else:
+                self[item] = other[item]
+        self = NifVector(self)
+        return self
+
+    def topn(self, n: int = 5):
+        return NifVector(list(self.items())[0:n])
+
+
+def generate_phrase_context(
+    sentences: list = None,
+    words_filter: dict = None,
+    phrase_separator: str = "+",
+    params: dict = {},
+):
+    """ """
+    max_phrase_length = params.get("max_phrase_length", 4)
+    min_left_length = params.get("min_left_length", 1)
+    max_left_length = params.get("max_left_length", 2)
+    min_right_length = params.get("min_right_length", 1)
+    max_right_length = params.get("max_right_length", 2)
+
+    # delete stopwords in sentence if enabled
+    for sentence in sentences:
+        if words_filter is not None:
+            sentence = [
+                word
+                for word in sentence
+                if words_filter["data"].get(word, None) is None
+            ]
+        else:
+            sentence = ["SENTSTART"] + sentence + ["SENTEND"]
+        # perform regex selection of sentence
+        sentence = [word for word in sentence if re.match("^[0-9]*[a-zA-Z]*$", word)]
+        for idx, word in enumerate(sentence):
+            for phrase_length in range(1, max_phrase_length + 1):
+                for left_length in range(min_left_length, max_left_length + 1):
+                    for right_length in range(min_right_length, max_right_length + 1):
+                        if (
+                            idx
+                            >= max(
+                                1 if sentence[0] == "SENTSTART" else 0,
+                                left_length,
+                            )
+                            and idx
+                            <= len(sentence)
+                            - phrase_length
+                            - max(
+                                1 if sentence[-1] == "SENTEND" else 0,
+                                right_length,
+                            )
+                            and not (left_length == 0 and right_length == 0)
+                        ):
+                            left_phrase = phrase_separator.join(
+                                sentence[idx - left_length + i]
+                                for i in range(0, left_length)
+                            )
+                            phrase = phrase_separator.join(
+                                sentence[idx + i] for i in range(0, phrase_length)
+                            )
+                            right_phrase = phrase_separator.join(
+                                sentence[idx + phrase_length + i]
+                                for i in range(0, right_length)
+                            )
+                            context = (left_phrase, right_phrase)
+                            yield (phrase, context)
