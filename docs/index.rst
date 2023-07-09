@@ -15,8 +15,8 @@ Contents
    PDF documents pipeline <02_adding_document_data>
    Adding annotations <03_adding_annotations>
    Using a SPARQL endpoint <04_using a SPARQL endpoint>
-   Using Ontolex-Lemon <05_using_a_lemon_termbase>
-   Creating and using a nifvec Graph <06_creating a nifvec graph>
+   Using a NifVector Graph <05_using a NifVector Graph>
+   Using Ontolex-Lemon <07_using_a_lemon_termbase>
    Contributions & Help <contributing>
    License <license>
    Authors <authors>
