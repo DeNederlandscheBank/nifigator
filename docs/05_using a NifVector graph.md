@@ -242,6 +242,30 @@ Contexts can also be used to find 'semantic' similarities.
 g.most_similar("King", topn=10, topcontexts=15)
 ```
 
+```python
+topic = set()
+s = ["tried"]
+added = True
+while added:
+    print("Current: "+str(s))
+    for item in s:
+        print("  processing "+str(item))
+        new = set()
+        for key, value in g.most_similar(item, topn=100, topcontexts=10).items():
+            if value < 0.25 and key not in s:
+                new.add(key)
+    for el in new:
+        s.append(el)
+    if new == set():
+        print("added set to false")
+        added = False
+print(s)
+```
+
+```python
+s
+```
+
 This results in
 
 ```console
