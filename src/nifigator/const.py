@@ -36,6 +36,23 @@ ONTOLEX = Namespace("http://www.w3.org/ns/lemon/ontolex#")
 LEXINFO = Namespace("http://www.lexinfo.net/ontology/3.0/lexinfo#")
 DECOMP = Namespace("http://www.w3.org/ns/lemon/decomp#")
 
+DEFAULT_URI = "https://mangosaurus.eu/rdf-data/"
+DEFAULT_PREFIX = "mangosaurus"
+
+MIN_PHRASE_COUNT = "min_phrase_count"
+MIN_CONTEXT_COUNT = "min_context_count"
+MIN_PHRASECONTEXT_COUNT = "min_phrasecontext_count"
+MAX_PHRASE_LENGTH = "max_phrase_length"
+MAX_LEFT_LENGTH = "max_left_length"
+MAX_RIGHT_LENGTH = "max_right_length"
+MIN_LEFT_LENGTH = "min_left_length"
+MIN_RIGHT_LENGTH = "min_right_length"
+CONTEXT_SEPARATOR = "context_separator"
+PHRASE_SEPARATOR = "phrase_separator"
+WORDS_FILTER = "words_filter"
+FORCED_SENTENCE_SPLIT_CHARACTERS = "force_sentence_split_characters"
+DEFAULT_CONTEXT_SEPARATOR = "_"
+DEFAULT_PHRASE_SEPARATOR = "+"
 
 # Tense
 # VerbForm
