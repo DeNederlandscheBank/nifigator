@@ -9,23 +9,30 @@ import pandas as pd
 
 import rdflib
 from rdflib import Graph
-from rdflib.namespace import DC, DCTERMS, NamespaceManager
+from rdflib.namespace import DC, RDF, DCTERMS, NamespaceManager
 from rdflib.store import Store
 from rdflib.term import IdentifiedNode, URIRef, Literal
 from rdflib.plugins.stores import sparqlstore
 from iribaker import to_iri
 
-from .const import ITSRDF, NIF, OLIA
 from .converters import nafConverter
 from .nafdocument import NafDocument
 from .nifobjects import (
     NifContext,
     NifContextCollection,
+    NifSentence,
+)
+from .utils import(
+    tokenize_text
+)
+from .const import(
+    ITSRDF,
+    NIF,
+    OLIA,
+    DEFAULT_URI,
+    DEFAULT_PREFIX
 )
 from .lemonobjects import Lexicon, LexicalEntry, Form
-
-DEFAULT_URI = "https://mangosaurus.eu/rdf-data/"
-DEFAULT_PREFIX = "mangosaurus"
 
 
 class NifGraph(Graph):
@@ -152,8 +159,10 @@ class NifGraph(Graph):
         :return: None
 
         """
+        g = Graph(identifier=self.identifier)
         for r in collection.triples():
-            self.add(r)
+            g.add(r)
+        self += g
 
     def __parse_file(self, file: str = None):
         """
@@ -185,73 +194,107 @@ class NifGraph(Graph):
                                     ".. Parsing file " + filename + " from zip file"
                                 )
                                 if filename[-4:].lower() == "hext":
-                                    self.parse(data=f.read().decode(), format="hext")
+                                    self += Graph().parse(
+                                        data=f.read().decode(), format="hext"
+                                    )
                                 elif filename[-3:].lower() == "ttl":
-                                    self.parse(data=f.read().decode(), format="turtle")
+                                    self += Graph().parse(
+                                        data=f.read().decode(), format="turtle"
+                                    )
                                 else:
-                                    self.parse(data=f.read().decode())
+                                    self += Graph().parse(data=f.read().decode())
                 elif file[-4:].lower() == "hext":
                     # if file ends with .hext then parse as hext file
                     with open(file, encoding="utf-8") as f:
                         logging.info(".. Parsing file " + file + "")
-                        self.parse(data=f.read(), format="hext")
+                        self += Graph().parse(data=f.read(), format="hext")
                 else:
                     # otherwise let rdflib determine format
                     with open(file, encoding="utf-8") as f:
                         logging.info(".. Parsing file " + file + "")
-                        self.parse(data=f.read())
+                        self += Graph().parse(data=f.read())
+
+    @property
+    def contexts(self, uri: str = DEFAULT_URI):
+        """
+        This property constructs and returns a `nif:Context`
+        from the `NifGraph`.
+
+        :return: list of `nif:Context` in the graph
+
+        """
+        uris = list(self.subjects(RDF.type, NIF.Context))
+        return [NifContext(uri=uri, graph=self) for uri in uris]
+
+    @property
+    def collections(self, uri: str = DEFAULT_URI):
+        """
+        This property constructs and returns a list of `nif:ContextCollection`
+        from the `NifGraph`.
+
+        :return: list of `nif:ContextCollection` in the graph
+
+        """
+        uris = list(self.subjects(RDF.type, NIF.ContextCollection))
+        return [NifContextCollection(uri=uri, graph=self) for uri in uris]
 
     @property
     def collection(self, uri: str = DEFAULT_URI):
         """
-        This property constructs and returns a `nif:ContextCollection`
+        This property constructs and returns the first `nif:ContextCollection`
         from the `NifGraph`.
+
+        :return: the first `nif:ContextCollection` in the graph
+
         """
-        dict_collections = self.query_rdf_type(NIF.ContextCollection)
-        dict_context = self.query_rdf_type(NIF.Context)
-        logging.info(".. extracting nif statements")
-        logging.info(
-            ".... found " + str(len(dict_collections.keys())) + " collections."
-        )
-        logging.info(".... found " + str(len(dict_context.keys())) + " contexts.")
+        for uri in list(self.subjects(RDF.type, NIF.ContextCollection)):
+            return NifContextCollection(uri=uri, graph=self)
 
-        for collection_uri in dict_collections.keys():
-            collection = NifContextCollection(uri=collection_uri)
-            for predicate in dict_collections[collection_uri].keys():
-                if predicate == NIF.hasContext:
-                    for context_uri in dict_collections[collection_uri][predicate]:
-                        if isinstance(
-                            self.store,
-                            rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore,
-                        ):
-                            graph = self.context_graph(uri=context_uri)
-                        else:
-                            graph = self
+        # dict_collections = self.query_rdf_type(NIF.ContextCollection)
+        # dict_context = self.query_rdf_type(NIF.Context)
+        # logging.info(".. extracting nif statements")
+        # logging.info(
+        #     ".... found " + str(len(dict_collections.keys())) + " collections."
+        # )
+        # logging.info(".... found " + str(len(dict_context.keys())) + " contexts.")
 
-                        nif_context = NifContext(
-                            URIScheme=self.URIScheme,
-                            uri=context_uri,
-                            graph=graph,
-                        )
-                        collection.add_context(context=nif_context)
-            return collection
-        else:
-            collection = NifContextCollection(uri=uri)
-            for context_uri in dict_context.keys():
-                if isinstance(
-                    self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore
-                ):
-                    graph = self.context_graph(uri=context_uri)
-                else:
-                    graph = self
+        # for collection_uri in dict_collections.keys():
+        #     collection = NifContextCollection(uri=collection_uri)
+        #     for predicate in dict_collections[collection_uri].keys():
+        #         if predicate == NIF.hasContext:
+        #             for context_uri in dict_collections[collection_uri][predicate]:
+        #                 if isinstance(
+        #                     self.store,
+        #                     rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore,
+        #                 ):
+        #                     graph = self.context_graph(uri=context_uri)
+        #                 else:
+        #                     graph = self
 
-                nif_context = NifContext(
-                    URIScheme=self.URIScheme,
-                    uri=context_uri,
-                    graph=graph,
-                )
-                collection.add_context(context=nif_context)
-            return collection
+        #                 nif_context = NifContext(
+        #                     URIScheme=self.URIScheme,
+        #                     uri=context_uri,
+        #                     graph=graph,
+        #                 )
+        #                 collection.add_context(context=nif_context)
+        #     return collection
+        # else:
+        #     collection = NifContextCollection(uri=uri)
+        #     for context_uri in dict_context.keys():
+        #         if isinstance(
+        #             self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore
+        #         ):
+        #             graph = self.context_graph(uri=context_uri)
+        #         else:
+        #             graph = self
+
+        #         nif_context = NifContext(
+        #             URIScheme=self.URIScheme,
+        #             uri=context_uri,
+        #             graph=graph,
+        #         )
+        #         collection.add_context(context=nif_context)
+        #     return collection
 
     @property
     def catalog(self):
@@ -341,69 +384,60 @@ class NifGraph(Graph):
         df = df.reindex(sorted(df.columns), axis=1)
         return df
 
-    def extract_collection(
-        self, collection_uri: URIRef = None, context_uris: List[URIRef] = None
-    ):
-        collection = NifContextCollection(uri=collection_uri)
-        for context_uri in context_uris:
-            nif_context = NifContext(
-                URIScheme=self.URIScheme, graph=self, uri=context_uri
-            ).load()
-            collection.add_context(context=nif_context)
-        return collection
+    # def query_rdf_type(self, rdf_type: URIRef = None):
+    #     if isinstance(self.store, sparqlstore.SPARQLUpdateStore):
+    #         q = (
+    #             """
+    #         SELECT ?s ?p ?o
+    #         WHERE {
+    #             SERVICE <"""
+    #             + self.store.query_endpoint
+    #             + """>
+    #             {
+    #                 ?s rdf:type """
+    #             + rdf_type.n3(self.namespace_manager)
+    #             + """ .
+    #                 ?s ?p ?o .
+    #             }
+    #         }"""
+    #         )
+    #     else:
+    #         q = (
+    #             """
+    #         SELECT ?s ?p ?o
+    #         WHERE {
+    #             ?s rdf:type """
+    #             + rdf_type.n3(self.namespace_manager)
+    #             + """ .
+    #             ?s ?p ?o .
+    #         }"""
+    #         )
+    #     results = self.query(q)
 
-    def query_rdf_type(self, rdf_type: URIRef = None):
-        if isinstance(self.store, sparqlstore.SPARQLUpdateStore):
-            q = (
-                """
-            SELECT ?s ?p ?o
-            WHERE {
-                SERVICE <"""
-                + self.store.query_endpoint
-                + """>
-                {
-                    ?s rdf:type """
-                + rdf_type.n3(self.namespace_manager)
-                + """ .
-                    ?s ?p ?o .
-                }
-            }"""
-            )
-        else:
-            q = (
-                """
-            SELECT ?s ?p ?o
-            WHERE {
-                ?s rdf:type """
-                + rdf_type.n3(self.namespace_manager)
-                + """ .
-                ?s ?p ?o .
-            }"""
-            )
-        results = self.query(q)
+    #     d = defaultdict(dict)
+    #     for result in results:
+    #         idx = result[0]
+    #         col = result[1]
+    #         val = result[2]
 
-        d = defaultdict(dict)
-        for result in results:
-            idx = result[0]
-            col = result[1]
-            val = result[2]
+    #         if col == NIF.hasContext:
+    #             if col in d[idx].keys():
+    #                 d[idx][col].append(val)
+    #             else:
+    #                 d[idx][col] = [val]
+    #         elif val in OLIA:
+    #             if col in d[idx].keys():
+    #                 d[idx][col].append(val)
+    #             else:
+    #                 d[idx][col] = [val]
+    #         else:
+    #             d[idx][col] = val
 
-            if col == NIF.hasContext:
-                if col in d[idx].keys():
-                    d[idx][col].append(val)
-                else:
-                    d[idx][col] = [val]
-            elif val in OLIA:
-                if col in d[idx].keys():
-                    d[idx][col].append(val)
-                else:
-                    d[idx][col] = [val]
-            else:
-                d[idx][col] = val
-
-        return d
+    #     return d
 
     def context_graph(self, uri: URIRef = None):
+        """
+        """
         if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
             q = (
                 """
@@ -443,8 +477,8 @@ class NifGraph(Graph):
 
     @property
     def lexicon(self):
-        """ """
-
+        """
+        """
         def noNumber(s: str = ""):
             return not s.replace(".", "", 1).replace(",", "", 1).isdigit()
 
@@ -532,3 +566,59 @@ class NifGraph(Graph):
                 lexica[lang].add_entry(entry)
 
         return lexica
+
+
+    def get(self, uri: URIRef = None):
+        """
+        """
+        if uri is None:
+            return None
+        else:
+            r = list(self.triples([uri, RDF.type, None]))
+            if len(r) > 0:
+                rdf_type = r[0][2]
+
+            if rdf_type == NIF.ContextCollection:
+                collection = NifContextCollection(
+                    uri=uri,
+                    graph=self
+                )
+                return collection
+            elif rdf_type == NIF.Context:
+                return NifContext(
+                    uri=uri,
+                    graph=self
+                    )
+            else:
+                context_uri = uri.split("&nif=")[0]+"&nif=context"
+                context = NifContext(uri=context_uri, graph=self)
+                if rdf_type == NIF.Sentence:
+                    return NifSentence(
+                        uri=uri,
+                        referenceContext=context, 
+                        graph=self
+                    )
+                elif rdf_type == NIF.Page:
+                    return NifPage(
+                        uri=uri,
+                        referenceContext=context, 
+                        graph=self
+                    )
+                elif rdf_type == NIF.Paragraph:
+                    return NifParagraph(
+                        uri=uri,
+                        referenceContext=context, 
+                        graph=self
+                    )
+                elif rdf_type == NIF.Phrase:
+                    return NifPhrase(
+                        uri=uri,
+                        referenceContext=context, 
+                        graph=self
+                    )
+                elif rdf_type == NIF.Word:
+                    return NifWord(
+                        uri=uri,
+                        referenceContext=context, 
+                        graph=self
+                    )

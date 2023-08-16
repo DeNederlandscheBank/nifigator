@@ -12,7 +12,7 @@ jupyter:
     name: python3
 ---
 
-# NifVector graphs
+# Introduction to NifVector graphs
 
 
 In a NifVector graph vector embeddings are defined from words and phrases, and the original contexts in which they occur (all in Nif). No dimensionality reduction whatsoever is applied. This enables to obtain some understanding about why certain word are found to be close to each other.
@@ -39,6 +39,7 @@ context = NifContext(
   isString="""Leo Tolstoy wrote the book War and Peace. 
               Jane Austen wrote the book Pride and Prejudice."""
 )
+context.extract_sentences()
 # Make a collection by passing a uri
 collection = NifContextCollection(uri="https://mangosaurus.eu/rdf-data")
 collection.add_context(context)
@@ -83,6 +84,7 @@ Resulting in the following contexts:
  ('Tolstoy+wrote+the+book', 'SENTEND'): 1}
  ```
 
+
 So the context ('book', 'SENTEND') with the phrase 'War and Peace' occurs once in the text. You see that contrary to the original Word2Vec model multiple word contexts are generated with '+' as word separator.
 
 Now we can find the most similar phrases of the phrase 'Pride and Prejudice'.
@@ -95,10 +97,11 @@ vec_graph.most_similar(phrase)
 This results in:
 
 ```console
-{'Pride and Prejudice': 0.0, 'War and Peace': 0.25}
+{'Pride and Prejudice': (4, 4), 'War and Peace': (3, 4)}
 ```
 
-The phrase 'War and Peace' has three out of four similar contexts, so its distance to the phrase 'Pride and Prejudice' is 0.25.
+
+The phrase 'War and Peace' has three out of four similar contexts.
 
 ## Querying the NifVector graph based on DBpedia
 
@@ -107,17 +110,16 @@ These are results of a NifVector graph created with 15.000 DBpedia pages. We def
 
 ```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID as default
-from nifigator import NifVectorGraph
+from nifigator import NifVectorGraph, URIRef
 
 # Connect to triplestore
 store = SPARQLUpdateStore()
-query_endpoint = 'http://localhost:3030/nifvec_en/sparql'
-update_endpoint = 'http://localhost:3030/nifvec_en/update'
+query_endpoint = 'http://localhost:3030/dbpedia_en/sparql'
+update_endpoint = 'http://localhost:3030/dbpedia_en/update'
 store.open((query_endpoint, update_endpoint))
 
 # Create NifVectorGraph with this store
-g = NifVectorGraph(store=store, identifier=default)
+g = NifVectorGraph(store=store, identifier=URIRef("https://mangosaurus.eu/dbpedia"))
 ```
 
 ### Most frequent contexts
@@ -127,22 +129,22 @@ The eight most frequent contexts in which the word 'has' occurs with their numbe
 
 ```python
 # most frequent contexts of the word "has"
-g.phrase_contexts("has", topn=10)
+g.phrase_contexts("Washington Smithsonian Institution", topn=10)
 ```
 
 This results in
 
 ```console
-[(('it', 'been'), 1429),
- (('It', 'been'), 1353),
- (('SENTSTART+It', 'been'), 1234),
- (('and', 'been'), 579),
- (('which', 'been'), 556),
- (('there', 'been'), 516),
- (('also', 'a'), 509),
- (('and', 'a'), 479),
- (('that', 'been'), 451),
- (('which', 'a'), 375)]
+{('It', 'been'): 1031,
+ ('it', 'been'): 1021,
+ ('SENTSTART+It', 'been'): 848,
+ ('and', 'been'): 642,
+ ('which', 'been'): 414,
+ ('that', 'been'): 390,
+ ('also', 'a'): 388,
+ ('and', 'a'): 380,
+ ('there', 'been'): 378,
+ ('it', 'a'): 326}
 ```
 
 This means that the corpus contains 1429 occurrences of 'it has been', i.e. occurrences where the word 'has' occurred in the context ('it', 'been').
@@ -151,7 +153,7 @@ SENTSTART and SENTEND are tokens to indicate the start and end of a sentence.
 
 ### Contexts and phrase similarities
 
-With the word 'has' we can construct a table with similar phrases in the index and contexts in the columns:
+Only specific words and phrases occur in the contexts mentioned above. If you derive the phrases that share the most frequent contexts with the word 'has' then you get the following table (the columns contains the contexts, the rows the phrases that have the most contexts in common):
 
 ```python
 import pandas as pd
@@ -183,7 +185,7 @@ Note that the list contains 'had not' and 'has not'.
 ### Top phrase similarities
 
 
-Only specific words and phrases occur in the contexts mentioned above. If you derive the phrases that share the most frequent contexts then you get the following table (the columns contains the contexts, the rows the phrases that have the most contexts in common):
+Based on the approach above we can derive top phrase similarities.
 
 ```python
 # top phrase similarities of the word "has"
@@ -194,16 +196,16 @@ This results in
 
 ```console
 {
- 'has': 0.0,
- 'had': 0.1428571428571429,
- 'appears to have': 0.2857142857142857,
- 'could have': 0.2857142857142857,
- 'had not': 0.2857142857142857,
- 'has also': 0.2857142857142857,
- 'has long': 0.2857142857142857,
- 'has never': 0.2857142857142857,
- 'has not': 0.2857142857142857,
- 'has often': 0.2857142857142857
+ 'had': (15, 15),
+ 'has': (15, 15),
+ 'would have': (11, 15),
+ 'have': (9, 15),
+ 'may have': (9, 15),
+ 'is': (8, 15),
+ 'was': (8, 15),
+ 'also has': (7, 15),
+ 'could have': (7, 15),
+ 'has never': (7, 15)
 }
 ```
 
@@ -211,23 +213,23 @@ The contexts in which words occur convey a lot of information about these words.
 
 ```python
 # top phrase similarities of the word "larger"
-g.most_similar("much larger", topn=10, topcontexts=10)
+g.most_similar("larger", topn=10, topcontexts=15)
 ```
 
 Resulting in:
 
 ```console
 {
- 'larger': 0.0,
- 'smaller': 0.06666666666666665,
- 'greater': 0.19999999999999996,
- 'higher': 0.19999999999999996,
- 'faster': 0.33333333333333337,
- 'less': 0.33333333333333337,
- 'longer': 0.33333333333333337,
- 'lower': 0.33333333333333337,
- 'shorter': 0.33333333333333337,
- 'better': 0.4
+ 'larger': (15, 15),
+ 'smaller': (14, 15),
+ 'greater': (12, 15),
+ 'higher': (11, 15),
+ 'less': (11, 15),
+ 'lower': (11, 15),
+ 'better': (10, 15),
+ 'longer': (10, 15),
+ 'more': (10, 15),
+ 'faster': (9, 15)
 }
 ```
 
@@ -238,47 +240,30 @@ Some contexts are close to each other in the sense that the same words occur in 
 Contexts can also be used to find 'semantic' similarities.
 
 ```python
+# top phrase similarities of the word "given"
+g.most_similar("given", topn=10, topcontexts=15)
+```
+
+```python
 # top phrase similarities of the word "King"
 g.most_similar("King", topn=10, topcontexts=15)
-```
-
-```python
-topic = set()
-s = ["tried"]
-added = True
-while added:
-    print("Current: "+str(s))
-    for item in s:
-        print("  processing "+str(item))
-        new = set()
-        for key, value in g.most_similar(item, topn=100, topcontexts=10).items():
-            if value < 0.25 and key not in s:
-                new.add(key)
-    for el in new:
-        s.append(el)
-    if new == set():
-        print("added set to false")
-        added = False
-print(s)
-```
-
-```python
-s
 ```
 
 This results in
 
 ```console
-[('King', 0.0),
- ('Emperor', 0.4666666666666667),
- ('Prince', 0.4666666666666667),
- ('President', 0.5333333333333333),
- ('Queen', 0.5333333333333333),
- ('State', 0.5333333333333333),
- ('king', 0.5333333333333333),
- ('Chancellor', 0.6),
- ('Church', 0.6),
- ('City', 0.6)]
+{
+ 'King': (15, 15),
+ 'Emperor': (7, 15),
+ 'Queen': (7, 15),
+ 'king': (7, 15),
+ 'Chief Justice': (6, 15),
+ 'Church': (6, 15),
+ 'City': (6, 15),
+ 'Director': (6, 15),
+ 'Governor': (6, 15),
+ 'House': (6, 15)
+}
 ```
 
 However, what closeness and similarity exactly mean in relation to embeddings is not formalized. As you can see, closeness relates to syntactical closeness as well as semantic closeness without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. the embeddings cannot distinguish the difference between larger and smaller. This is because embeddings are only based on the form of text, and not on meaning. Even if we have all original contexts, then the model would still not be able to distinguish antonyms like large and small.
@@ -316,16 +301,16 @@ for r in g.context_phrases(context, topn=10).items():
 ```
 
 ```console
-('capital', 232)
-('largest', 225)
-('old', 81)
-('inner', 66)
-('first', 55)
-('fortress', 48)
-('capital and largest', 44)
-('second largest', 40)
-('host', 36)
-('ancient', 33)
+('largest', 156)
+('capital', 148)
+('old', 62)
+('inner', 48)
+('first', 42)
+('second largest', 38)
+('capital and largest', 33)
+('Greek', 26)
+('most populous', 26)
+('south of the', 26)
 ```
 
 ### Vector calculations
@@ -336,9 +321,9 @@ The set of contexts in which a phrase occurs can be seen as a vector.
 from nifigator import NifVector
 
 context = ("a", "woman")
-woman = NifVector(g.context_phrases(context, topn=10))
+woman = NifVector(g.context_phrases(context, topn=None))
 context = ("a", "man")
-man = NifVector(g.context_phrases(context, topn=10))
+man = NifVector(g.context_phrases(context, topn=None))
 ```
 
 ```python
@@ -363,35 +348,11 @@ d2 = NifVector(g.phrase_contexts("dog", topn=None))
 (d1 & d2).topn(15)
 ```
 
-### Extracting contexts in sentences
-
-
-```python
-from nifigator import generate_phrase_context, URIRef
-
-sentences = ['The cat sat on the mat .'.split(" ")]
-s = set([item[1] for item in generate_phrase_context(sentences=sentences)])
-
-for item in list(s)[0:10]:
-    print(item)
-```
-
-```console
-('The', 'sat')
-('The', 'sat+on')
-('SENTSTART', 'on')
-('sat', 'mat')
-('cat+sat', 'mat+SENTEND')
-('SENTSTART', 'the')
-('cat+sat', 'the')
-('on+the', 'SENTEND')
-('cat+sat', 'SENTEND')
-('SENTSTART', 'cat+sat')
-```
+The Jaccard index is 
+$J(A, B)=$$ | A\bigcap B | \over | A \bigcup B |$
+and the Jaccard distance is 
+$d_{J}(A, B)=1-J(A, B)$
 
 ```python
-# for item in s:
-#     p = list(g.triples([URIRef(g.context_ns+"_".join(item)), RDF.type, NIFVEC.Context]))
-#     if p != []:
-#         print(item)
+
 ```
