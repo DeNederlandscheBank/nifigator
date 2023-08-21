@@ -577,6 +577,9 @@ class NifGraph(Graph):
             r = list(self.triples([uri, RDF.type, None]))
             if len(r) > 0:
                 rdf_type = r[0][2]
+            else:
+                logging.warning("uri not found: "+str(uri))
+                return None
 
             if rdf_type == NIF.ContextCollection:
                 collection = NifContextCollection(

@@ -318,12 +318,12 @@ for r in g.context_phrases(context, topn=10).items():
 The set of contexts in which a phrase occurs can be seen as a vector.
 
 ```python
-from nifigator import NifVector
+from collections import Counter
 
 context = ("a", "woman")
-woman = NifVector(g.context_phrases(context, topn=None))
+woman = Counter(g.context_phrases(context, topn=None))
 context = ("a", "man")
-man = NifVector(g.context_phrases(context, topn=None))
+man = Counter(g.context_phrases(context, topn=None))
 ```
 
 ```python
@@ -337,15 +337,15 @@ print(man - woman)
 Word embeddings are necessarily derived from contexts and thereby only from the form of the text.
 
 ```python
-d1 = NifVector(g.phrase_contexts("rainfall", topn=None))
-d2 = NifVector(g.phrase_contexts("rain", topn=None))
-(d1 & d2).topn(15)
+d1 = Counter(g.phrase_contexts("rainfall", topn=None))
+d2 = Counter(g.phrase_contexts("rain", topn=None))
+(d1 + d2).most_common(15)
 ```
 
 ```python
-d1 = NifVector(g.phrase_contexts("cat", topn=None))
-d2 = NifVector(g.phrase_contexts("dog", topn=None))
-(d1 & d2).topn(15)
+d1 = Counter(g.phrase_contexts("cat", topn=None))
+d2 = Counter(g.phrase_contexts("dog", topn=None))
+(d1 + d2).most_common(15)
 ```
 
 The Jaccard index is 

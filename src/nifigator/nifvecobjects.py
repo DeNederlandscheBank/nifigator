@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from collections import OrderedDict, defaultdict, deque
+from collections import OrderedDict, defaultdict, deque, Counter
 from typing import Union, List, Optional
 from itertools import combinations, product
 
@@ -83,13 +83,12 @@ class NifVectorGraph(NifGraph):
 
         words_filter = params.get(WORDS_FILTER, None)
         if words_filter is not None:
-            self.words_filter = words_filter
             # reformulate to dict for efficiency
-            self.words_filter["data"] = {
+            self.params[WORDS_FILTER]["data"] = {
                 phrase: True for phrase in words_filter["data"]
             }
         else:
-            self.words_filter = None
+            self.params[WORDS_FILTER] = None
 
         self.bind("lexicon", lexicon)
         self.bind("window", window)
@@ -111,7 +110,7 @@ class NifVectorGraph(NifGraph):
 
         if sentences is not None:
             logging.info(".. Creating windows dict")
-            windows = self.generate_windows(documents=sentences)
+            windows = self.generate_windows(documents=sentences, params=self.params)
             logging.info(".. Creating phrase and context dicts")
             phrase_count, context_count = self.create_window_phrase_count_dicts(
                 windows=windows
@@ -235,7 +234,9 @@ class NifVectorGraph(NifGraph):
                 yield ((window_uri, NIFVEC.hasCount, window_count))
 
     def create_window_phrase_count_dicts(self, windows: dict={}):
-        """ """
+        """
+        Function to prune and create phrase dict and contexts dict
+        """
         min_phrasecontext_count = self.params.get("min_phrasecontext_count", 5)
         min_phrase_count = self.params.get("min_phrase_count", 5)
         min_context_count = self.params.get("min_context_count", 5)
@@ -280,35 +281,12 @@ class NifVectorGraph(NifGraph):
 
         return phrase_count, context_count
 
-    def generate_windows(self, documents: list=None):
-        """ """
-        phrase_sep = self.params.get(PHRASE_SEPARATOR, DEFAULT_PHRASE_SEPARATOR)
-        forced_sentence_split_characters = self.params.get(FORCED_SENTENCE_SPLIT_CHARACTERS, [])
-
-        windows = {}
-
-        for key, value in documents.items():
-            tokenized_text = tokenize_text(value, forced_sentence_split_characters)
-            sentences = [
-                [word["text"] for word in sentence] for sentence in tokenized_text
-            ]
-            for phrase, context, _ in generate_phrase_context(
-                sentences=sentences,
-                words_filter=self.words_filter,
-                phrase_separator=phrase_sep,
-                params=self.params,
-            ):
-                if windows.get(phrase, None) is None:
-                    windows[phrase] = defaultdict(int)
-                windows[phrase][context] += 1
-
-        return windows
-
     def generate_window_relations(
         self, 
         documents: list=None,
         windows: dict={}):
-        """ """
+        """
+        """
         phrase_sep = self.params.get(PHRASE_SEPARATOR, DEFAULT_PHRASE_SEPARATOR)
         forced_sentence_split_characters = self.params.get(FORCED_SENTENCE_SPLIT_CHARACTERS, [])
 
@@ -347,17 +325,32 @@ class NifVectorGraph(NifGraph):
 
     def phrase_contexts(self, 
                         phrase: str=None,
-                        uri: URIRef=None,
+                        phrase_uri: URIRef=None,
+                        left: str=None,
+                        right: str=None,
                         topn: int=15):
-        """ """
+        """
+        Function that returns the contexts of a phrase
+
+        :param phrase: the phrase from which to derive the contexts (as a string)
+
+        :param phrase_uri: the phrase from which to derive the contexts (as a uri)
+
+        :param left: the left side of the context (optional, as a string)
+
+        :param right: the right side of the context (optional, as a string)
+
+        :param topn: restrict output to topn (default = 15)
+
+        """
         ns = dict(self.namespaces())
         lexicon_ns = ns['lexicon']
 
         context_sep = self.params.get(CONTEXT_SEPARATOR, DEFAULT_CONTEXT_SEPARATOR)
         phrase_sep = self.params.get(PHRASE_SEPARATOR, DEFAULT_PHRASE_SEPARATOR)
 
-        if uri is None:
-            uri = URIRef(lexicon_ns + phrase_sep.join(phrase.split(" ")))
+        if phrase_uri is None:
+            phrase_uri = URIRef(lexicon_ns + phrase_sep.join(phrase.split(" ")))
             
         q = """
     SELECT DISTINCT ?v (sum(?count) as ?n)
@@ -369,12 +362,19 @@ class NifVectorGraph(NifGraph):
             """
         {
             """
-            + uri.n3()
+            + phrase_uri.n3()
             + """ nifvec:isPhraseOf ?w .
             ?w rdf:type nifvec:Window .
             ?w nifvec:hasContext ?c .
             ?w nifvec:hasCount ?count .
             ?c rdf:value ?v .
+            """)
+        if left is not None:
+            q += '?c nifvec:hasLeftValue "'+Literal(left)+'" .\n'
+        if right is not None:
+            q += '?c nifvec:hasRightValue "'+Literal(right)+'" .\n'
+
+        q += ("""
         }
     }
     GROUP BY ?v
@@ -383,25 +383,36 @@ class NifVectorGraph(NifGraph):
         )
         if topn is not None:
             q += "LIMIT " + str(topn) + "\n"
-        results = {
+        results = Counter({
             tuple(r[0].split(context_sep)): r[1].value
             for r in self.query(q)
-        }
+        })
         return results
 
     def most_similar(self, 
                      phrase: str=None, 
-                     uri: URIRef=None,
+                     phrase_uri: URIRef=None,
                      topn: int=15, 
                      topcontexts: int=25):
-        """ """
+        """
+        Function that returns most similar phrases of a phrase
+
+        :param phrase: the phrase from which to derive the contexts (as a string)
+
+        :param phrase_uri: the phrase from which to derive the contexts (as a uri)
+
+        :param topn: restrict output to topn (default = 15)
+
+        :param topcontexts: number of contexts to take into account for finding similar phrases
+
+        """
         ns = dict(self.namespaces())
         lexicon_ns = ns['lexicon']
 
         phrase_sep = self.params.get(PHRASE_SEPARATOR, DEFAULT_PHRASE_SEPARATOR)
 
-        if uri is None:
-            uri = URIRef(lexicon_ns + phrase_sep.join(phrase.split(" ")))
+        if phrase_uri is None:
+            phrase_uri = URIRef(lexicon_ns + phrase_sep.join(phrase.split(" ")))
 
         q = """
     SELECT distinct ?v (count(?c) as ?num)
@@ -417,7 +428,7 @@ class NifVectorGraph(NifGraph):
                 WHERE
                 {
                     """
-            + uri.n3()
+            + phrase_uri.n3()
             + """ nifvec:isPhraseOf ?w .
                     ?w rdf:type nifvec:Window .
                     ?w nifvec:hasContext ?c .
@@ -444,12 +455,12 @@ class NifVectorGraph(NifGraph):
         results = [item for item in self.query(q)]
         if len(results) > 0:
             norm = results[0][1].value
-            results = {
+            results = Counter({
                 r[0].replace(phrase_sep, " "): (r[1].value, norm)
                 for r in results
-            }
+            })
         else:
-            results = {}
+            results = Counter()
         return results
 
     def extract_rdf_type(self, rdf_type: str=None, topn: int=None):
@@ -497,12 +508,6 @@ class NifVectorGraph(NifGraph):
         """
         return self.extract_rdf_type(rdf_type="nif:Phrase", topn=topn)
 
-    def contexts(self, topn: int=None):
-        """
-        Returns contexts in the graph
-        """
-        return self.extract_rdf_type(rdf_type="nifvec:Context", topn=topn)
-
     def windows(self, topn: int=None):
         """
         Returns windows in the graph
@@ -530,8 +535,11 @@ class NifVectorGraph(NifGraph):
             d["data"].append([phrase_contexts.get(c, 0) for c in contexts.keys()])
         return d
 
-    def context_phrases(self, context: list = None, topn: int = 15):
-        """ """
+    def context_phrases(self, context: tuple = None, topn: int = 15):
+        """
+        Function that returns the phrases of a context
+
+        """
         ns = dict(self.namespaces())
         context_ns = ns['context']
 
@@ -566,51 +574,37 @@ class NifVectorGraph(NifGraph):
         )
         if topn is not None:
             q += "LIMIT " + str(topn) + "\n"
-        results = {
+        results = Counter({
             r[0].replace(phrase_sep, " "): r[1].value
             for r in self.query(q)
-        }
+        })
         return results
 
+def generate_windows(documents: dict=None, params: dict={}):
+    """
+    """
+    phrase_sep = params.get(PHRASE_SEPARATOR, DEFAULT_PHRASE_SEPARATOR)
+    forced_sentence_split_characters = params.get(FORCED_SENTENCE_SPLIT_CHARACTERS, [])
+    words_filter = params.get(WORDS_FILTER, None)
 
-class NifVector(dict):
-    def __init__(self, *args, **kwargs):
-        self.update(*args, **kwargs)
-        self = {
-            k: v
-            for k, v in sorted(self.items(), reverse=True, key=lambda item: item[1])
-        }
+    windows = dict()
 
-    def __sub__(self, other):
-        for item in other.keys():
-            if item in self.keys():
-                del self[item]
-        self = NifVector(self)
-        return self
+    for key, value in documents.items():
+        tokenized_text = tokenize_text(value, forced_sentence_split_characters)
+        sentences = [
+            [word["text"] for word in sentence] for sentence in tokenized_text
+        ]
+        for phrase, context, _ in generate_phrase_context(
+            sentences=sentences,
+            words_filter=words_filter,
+            phrase_separator=phrase_sep,
+            params=params,
+        ):
+            if windows.get(phrase, None) is None:
+                windows[phrase] = Counter()
+            windows[phrase][context] += 1
 
-    def __add__(self, other):
-        d = NifVector()
-        for item in self.keys():
-            if item in other.keys():
-                d[item] = other[item] + self[item]
-        self = NifVector(d)
-        return self
-
-    def __and__(self, other):
-        return self + other
-
-    def __or__(self, other):
-        for item in other.keys():
-            if item in self.keys():
-                self[item] += other[item]
-            else:
-                self[item] = other[item]
-        self = NifVector(self)
-        return self
-
-    def topn(self, n: int=5):
-        return NifVector(list(self.items())[0:n])
-
+    return windows
 
 def generate_phrase_context(
     sentences: list=None,
@@ -618,7 +612,9 @@ def generate_phrase_context(
     phrase_separator: str=DEFAULT_PHRASE_SEPARATOR,
     params: dict={},
 ):
-    """ """
+    """
+    
+    """
     max_phrase_length = params.get("max_phrase_length", 5)
     min_left_length = params.get("min_left_length", 1)
     max_left_length = params.get("max_left_length", 3)

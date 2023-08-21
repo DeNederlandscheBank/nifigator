@@ -17,6 +17,7 @@ except PackageNotFoundError:  # pragma: no cover
 finally:
     del version, PackageNotFoundError
 
+from .const import *
 from .converters import *
 from .nifgraph import *
 from .nifobjects import *

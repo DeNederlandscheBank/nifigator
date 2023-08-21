@@ -12,10 +12,10 @@ jupyter:
     name: python3
 ---
 
-# NifVector graphs (English)
+# Sentence similarities and searching
 
 
-In a NifVector graph vector embeddings are defined from words and phrases, and the original contexts in which they occur (all in Nif). No dimensionality reduction whatsoever is applied. This enables to obtain some understanding about why certain word are found to be close to each other.
+
 
 ```python
 import os, sys, logging
@@ -26,24 +26,21 @@ logging.basicConfig(stream=sys.stdout,
 
 ```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
-from nifigator import NifVectorGraph, URIRef
 
-# Connect to triplestore
+# Create store
 store = SPARQLUpdateStore()
 query_endpoint = 'http://localhost:3030/dbpedia_en/sparql'
 update_endpoint = 'http://localhost:3030/dbpedia_en/update'
 store.open((query_endpoint, update_endpoint))
-
-# Graph identifier
-identifier = URIRef("https://mangosaurus.eu/dbpedia")
 ```
 
 ```python
-from nifigator import NifVectorGraph
+from nifigator import NifVectorGraph, URIRef
 
+# Create NifVector graph to store
 nif_graph = NifVectorGraph(
     store=store,
-    identifier=identifier
+    identifier=URIRef("https://mangosaurus.eu/dbpedia")
 )
 ```
 
@@ -51,8 +48,12 @@ nif_graph = NifVectorGraph(
 
 
 ```python
-context_1 = nif_graph.get(URIRef("http://dbpedia.org/resource/Aldebaran?dbpv=2020-07&nif=context"))
-context_2 = nif_graph.get(URIRef("http://dbpedia.org/resource/Antares?dbpv=2020-07&nif=context"))
+context_1 = nif_graph.get(
+    URIRef("http://dbpedia.org/resource/Aldebaran?dbpv=2020-07&nif=context")
+)
+context_2 = nif_graph.get(
+    URIRef("http://dbpedia.org/resource/Antares?dbpv=2020-07&nif=context")
+)
 ```
 
 ```python
@@ -64,96 +65,157 @@ print(context_2)
 ```
 
 ```python
-from nifigator import tokenize_text, generate_phrase_context, NIFVEC, NifVector
 
-context_1_sentences = {}
-for sentence in context_1.sentences:
-    sentences = [[t['text'] for t in s] for s in tokenize_text(sentence.anchorOf, forced_sentence_split_characters=["*"])]
-    s = set([i[1] for i in generate_phrase_context(sentences=sentences)])
-    if len(s) > 1:
-        context_1_sentences[sentence.anchorOf] = s
+```
+
+```python
+
+```
+
+```python
+from nifigator import STOPWORDS, generate_windows
+
+# setup a dictionary with phrases and contexts to speed up
+def setup_phrase_contexts_dict(documents: list=None, phrase_contexts_dict: dict={}, topn: int=15):
+
+    params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
+
+    for s in documents:
+
+        phrases = generate_windows(
+            documents={"id": s}, 
+            params=params
+        ).keys()
+
+        for phrase in phrases:
+            phrase_contexts = phrase_contexts_dict.get(phrase, None)
+            if phrase_contexts is None:
+                phrase_contexts = nif_graph.phrase_contexts(phrase, topn=topn)
+                phrase_contexts_dict[phrase] = phrase_contexts
     
-context_2_sentences = {}
-for sentence in context_2.sentences:
-    sentences = [[t['text'] for t in s] for s in tokenize_text(sentence.anchorOf, forced_sentence_split_characters=["*"])]
-    s = set([i[1] for i in generate_phrase_context(sentences=sentences)])
-    if len(s) > 1:
-        context_2_sentences[sentence.anchorOf] = s    
-
+    return phrase_contexts_dict
 ```
 
 ```python
-total = dict()
-
-for sent_1 in context_1_sentences.keys():
-    contexts_1 = context_1_sentences[sent_1]
-    results = {}
-    for key in list(context_2_sentences.keys()):
-        contexts_2 = context_2_sentences[key]
-        jaccard_distance = 1 - len(contexts_1 & contexts_2) / (len(contexts_1 | contexts_2))
-        results[key] = jaccard_distance
-    sent_2 = min(results, key=results.get)
-    total[(sent_1, sent_2)] = results[sent_2]
-
+phrase_contexts_dict = setup_phrase_contexts_dict([context_1.isString, context_2.isString], {})
 ```
 
 ```python
-dict(sorted(total.items(), key=lambda item: item[1]))
-```
+from nifigator import generate_windows, STOPWORDS
+from collections import Counter
 
-```python
-def weighted_jaccard_similarity(phrase_1: str=None):
-    """ 
-    """
-    contexts_1 = nif_graph.phrase_contexts(phrase_1)
+def extract_contexts(s: str=None):
     
-    phrases = set([
-        item2 
-        for item in contexts_1
-        for item2 in nif_graph.context_phrases(item).keys()
-    ])    
-    r = dict()
+    params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
+
+    phrases = generate_windows(
+        documents={"id": s}, 
+        params=params
+    ).keys()
+    
+    c = Counter()
     for phrase in phrases:
-        contexts_2 = nif_graph.phrase_contexts(phrase)
-        contexts = set(contexts_1.keys()) & set(contexts_2.keys())
-        r_min = 0
-        r_max = 0
-        for context in contexts:
-            r_min += min(contexts_1.get(context), contexts_2.get(context))
-            r_max += max(contexts_1.get(context), contexts_2.get(context))
-        if r_max != 0:
-            r[phrase] = 1 - r_min / r_max
-        else:
-            r[phrase] = 1
-    return dict(sorted(r.items(), key=lambda item: item[1]))
+        if phrase_contexts_dict.get(phrase, None) is None:
+            print(phrase)
+        c += phrase_contexts_dict.get(phrase, None)
+            
+    return c
 ```
 
 ```python
-weighted_jaccard_similarity("although")
+from nifigator import tokenize_text, generate_phrase_context, NIFVEC
+
+context_sentences = {}
+for sentence in context_1.sentences+context_2.sentences:
+    context_sentences[sentence.anchorOf] = extract_contexts(sentence.anchorOf)
+```
+
+### Find similar sentences
+
+```python
+def jaccard_distance(c1: set=None, c2: set=None):
+    if len(c1 | c2 ) > 0:
+        return 1 - len(c1 & c2)/(len(c1 | c2))
+    else:
+        return 1
 ```
 
 ```python
-def tversky_index(phrase_1: str=None, alfa: float=None, beta: float=None):
-    """ 
-    """
-    c_1 = nif_graph.phrase_contexts(phrase_1, topn=15).keys()
-    phrases = set([
-        item2 
-        for item in c_1
-        for item2 in nif_graph.context_phrases(item, topn=15).keys()
-    ])
-    print("Number of candidates: "+str(len(phrases)))
-    r = dict()
-    for phrase in phrases:
-        c_2 = nif_graph.phrase_contexts(phrase, topn=15).keys()
-        r[phrase] = (len(c_1 & c_2) / len(c_1 | c_2)) # + alfa * len(c_1 - c_2 ) + beta * len(c_2 - c_1)))
+from itertools import combinations
         
-    return dict(sorted(r.items(), key=lambda item: item[1], reverse=True))
+similarities = dict()
+
+for sent_1, sent_2 in combinations(context_sentences.keys(), 2):
+    
+    c1 = context_sentences[sent_1].keys()
+    c2 = context_sentences[sent_2].keys()
+
+    similarities[(sent_1, sent_2)] = jaccard_distance(c1, c2)
+
+similarities = sorted(similarities.items(), key=lambda item: item[1])
+```
+
+```python
+similarities[0:10]
+```
+
+# Searching
+
+```python
+def tversky_index(c1: set=None, c2: set=None, alfa: float=0, beta: float=0):
+    denom = len(c1 & c2)+alfa*len(c1 - c2)+beta*len(c2 - c1)
+    if denom != 0:
+        return len(c1 & c2) / denom
+    else:
+        return 0
 
 ```
 
 ```python
-tversky_index("author", 0, 0)
+question = "the brightest star in the constellation of Taurus"
+# question = "the sun in the constellation of Taurus"
+# question = "When is Antares visible to the naked eye?"
+# question = "What is the Chinese name of Aldebaran"
+# question = "How do the Māori people call Antares"
+# question = "What did astronomer William Herschel discover on Aldebaran?"
+# question = "What stars are visible to the naked eye?"
+# question = "bass guitar of which guitar family?"
+phrase_contexts_dict = setup_phrase_contexts_dict([question], phrase_contexts_dict)
+
+question_contexts = extract_contexts(question)
+c1 = question_contexts.keys()
+
+similarities = {}
+for sent in context_sentences.keys():
+
+    c2 = context_sentences[sent].keys()
+    
+    tversky_distance = 1 - tversky_index(c1, c2, 1, 0)
+
+    a = list()
+    for key in c1:
+        context_1_item = question_contexts.get(key, 0)
+        context_2_item = context_sentences[sent].get(key, 0)
+        a.append([key, context_1_item, context_2_item])
+
+    similarities[sent] = ((tversky_distance, a))
+```
+
+```python
+for item in list(dict(sorted(similarities.items(), key=lambda item: item[1][0])).items())[0:10]:
+    print(item[0])
+    print((item[1][0]))
+#     for item2 in item[1][1]:
+#         print(item2)
+    print("--")
+```
+
+```python
+
+```
+
+```python
+
 ```
 
 ```python
