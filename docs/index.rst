@@ -15,8 +15,9 @@ Contents
    PDF documents pipeline <02_adding_document_data>
    Adding annotations <03_adding_annotations>
    Using a SPARQL endpoint <04_using a SPARQL endpoint>
-   Using a NifVector Graph <05_using a NifVector graph>
-   Creating a NifVector Graph <06_creating a nifvec graph>
+   Introduction to NifVector graphs <05_using a NifVector graph>
+   Creating a NifVector graph <06_creating a nifvec graph>
+   Using a NifVector graph for sentence similarities and searching <07_Sentence similarities>
    Using Ontolex-Lemon <10_using_a_lemon_termbase>
    Contributions & Help <contributing>
    License <license>

@@ -15,7 +15,7 @@ jupyter:
 # Introduction to NifVector graphs
 
 
-In a NifVector graph vector embeddings are defined from words and phrases, and the original contexts in which they occur (all in Nif). No dimensionality reduction whatsoever is applied. This enables to obtain some understanding about why certain word are found to be close to each other.
+Similar to word embeddings NifVector graph vector embeddings are defined from words and phrases (multiwords) and the contexts in which they occur. The main difference from traditional word embeddings is that here no dimensionality reduction whatsoever is applied. This enables to obtain some understanding about why certain word are found to be close to each other.
 
 ```python
 import os, sys, logging
@@ -106,7 +106,7 @@ The phrase 'War and Peace' has three out of four similar contexts.
 ## Querying the NifVector graph based on DBpedia
 
 
-These are results of a NifVector graph created with 15.000 DBpedia pages. We defined a context of a word in it simplest form: the tuple of the previous word and the next word (no preprocessing, no changes to the text, i.e. no deletion of stopwords and punctuation).
+These are results of a NifVector graph created with 10.000 DBpedia pages. We defined a context of a word in it simplest form: the tuple of the previous word and the next word (no preprocessing, no changes to the text, i.e. no deletion of stopwords and punctuation). The maximum phrase length is five words, the maximum left and right context is three words.
 
 ```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
@@ -129,7 +129,7 @@ The eight most frequent contexts in which the word 'has' occurs with their numbe
 
 ```python
 # most frequent contexts of the word "has"
-g.phrase_contexts("Washington Smithsonian Institution", topn=10)
+g.phrase_contexts("has", topn=10)
 ```
 
 This results in
@@ -147,7 +147,7 @@ This results in
  ('it', 'a'): 326}
 ```
 
-This means that the corpus contains 1429 occurrences of 'it has been', i.e. occurrences where the word 'has' occurred in the context ('it', 'been').
+This means that the corpus contains 1031 occurrences of 'It has been', i.e. occurrences where the word 'has' occurred in the context ('It', 'been').
 
 SENTSTART and SENTEND are tokens to indicate the start and end of a sentence.
 
@@ -158,29 +158,28 @@ Only specific words and phrases occur in the contexts mentioned above. If you de
 ```python
 import pandas as pd
 pd.DataFrame().from_dict(
-    g.dict_phrases_contexts("has", topcontexts=7), orient='tight'
+    g.dict_phrases_contexts("has", topcontexts=8), orient='tight'
 )
 ```
 
 This results in:
 
 ```console
-                  it 	It      SENTSTART+It and     which   year   this+year
-                  been 	been    been         been    been    been   been
-             
-has               1682 	1544 	1484         727     664     638    633
-had 	          589 	53      63           196     1381    3      0
-may have          79   	17      17           42      62      0      0
-would have        66    9       9            9       44      0      0
-have 	          5     0       0            244     300     0      0
-has also          51    204     213          9       5       0      0
-has never         20    6       6            5       2       0      0
-
+                  it 	SENTSTART+It 	It      and 	that 	there 	which   also
+                  been 	been 	        been 	been 	been 	been 	been    a
+            
+has 	          1021 	858 	        827 	575 	428 	420 	420     388
+had 	          326 	47             	40    	169 	559 	112 	786     153
+could have        11 	2               2      	2       15      2    	5       2 
+has never         12 	6               6       5     	5       3    	2       0
+has not           28    7               7    	12      20      2    	7       0
+may have          46 	17              17   	42   	16  	18  	50      0
+would have        61 	9               6   	2       37   	10   	32      0
 ```
 
-The number of contexts that a word has in common with the most frequent contexts of another word can be used as a measure of distance to that word. You see that most of them are forms of the verb 'have'. Contexts ending with 'been' describe perfect tenses. The word 'had' (second row) has 6 contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (fourth row) has 5 contexts in common, so 'could have' is also similar but less similar than the word 'had'. Normally a much higher number of most frequent contexts are used for similarity.
+The number of contexts that a word has in common with contexts of another word can be used as a measure of similarity. You see that most of them are forms of the verb 'have'. Contexts ending with 'been' describe perfect tenses. The word 'had' (second row) has 7 contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (seventh row) has 6 contexts in common, so 'would have' is also similar but less similar than the word 'had'. Normally a much higher number of most frequent contexts are used for similarity.
 
-Note that the list contains 'had not' and 'has not'.
+Note that the list contains 'has not'.
 
 ### Top phrase similarities
 
@@ -233,16 +232,16 @@ Resulting in:
 }
 ```
 
-Like the word 'larger', these are all comparative adjectives. These words are close because they share the most frequent contexts. In general, you can derive (to some extent) the word class (the part of speech tag and the morphological features) from the contexts in which a word occurs. For example, if the previous word is 'the' and the next word is 'of' then the word between these words will probably be a noun. The word between 'have' and 'been' is almost always an adverb, the word between 'the' and 'book' is almost always an adjective. There are contexts that indicate the grammatical number, the verb tense, and so on.
+Like the word 'larger', these are all comparative adjectives. These words are close because they share the most frequent contexts. In general, you can derive (to some extent) the word class (the part of speech tag and the morphological features) from the contexts in which a word occurs. For example, if the previous word is 'the' and the next word is 'of' then the word between these words will probably be a noun. The word between 'have' and 'been' is almost always an adverb, the word between 'the' and 'book' is almost always an adjective. Likewise, there are contexts that indicate the grammatical number, the verb tense, and so on.
 
 Some contexts are close to each other in the sense that the same words occur in the same contexts, for example, the tuples (much, than) and (is, than) are close because both contexts allow the same words, in this case comparative adjectives. The contexts can therefore be combined and reduced in number. That is what happens when embeddings are calculated with the Word2Vec model. Similar contexts are summarized into one or a limited number of contexts. So it is no surprise that in a well-trained word2vec model adverbs are located near other adverbs, nouns near other nouns, etc. [It might be worthwhile to apply a bi-clustering algorithm here (clustering both rows and columns).]
-
-Contexts can also be used to find 'semantic' similarities.
 
 ```python
 # top phrase similarities of the word "given"
 g.most_similar("given", topn=10, topcontexts=15)
 ```
+
+Contexts can also be used to find 'semantic' similarities.
 
 ```python
 # top phrase similarities of the word "King"
@@ -313,45 +312,65 @@ for r in g.context_phrases(context, topn=10).items():
 ('south of the', 26)
 ```
 
-### Vector calculations
 
-The set of contexts in which a phrase occurs can be seen as a vector.
 
-```python
-from collections import Counter
+### NifVector calculations
 
-context = ("a", "woman")
-woman = Counter(g.context_phrases(context, topn=None))
-context = ("a", "man")
-man = Counter(g.context_phrases(context, topn=None))
-```
+We calculate with multisets instead of real-valued vectors.
+
+Different adverbs for the words man and woman (results are highly depended on documents used).
 
 ```python
-print(woman - man)
+context = ("the", "woman")
+c1 = g.context_phrases(context, topn=None)
+context = ("the", "man")
+c2 = g.context_phrases(context, topn=None)
 ```
+
+Result of set substraction W \ M (adverbs that are used between 'the' and 'woman' but not between 'the' and 'man'.
 
 ```python
-print(man - woman)
+(c1 - c2).most_common(5)
 ```
 
-Word embeddings are necessarily derived from contexts and thereby only from the form of the text.
+Result of set substraction M \ W
 
 ```python
-d1 = Counter(g.phrase_contexts("rainfall", topn=None))
-d2 = Counter(g.phrase_contexts("rain", topn=None))
-(d1 + d2).most_common(15)
+(c2 - c1).most_common(5)
 ```
 
-```python
-d1 = Counter(g.phrase_contexts("cat", topn=None))
-d2 = Counter(g.phrase_contexts("dog", topn=None))
-(d1 + d2).most_common(15)
-```
+The distance can be measured with the Jaccard index defined by 
 
-The Jaccard index is 
 $J(A, B)=$$ | A\bigcap B | \over | A \bigcup B |$
-and the Jaccard distance is 
+
+and the Jaccard distance
+
 $d_{J}(A, B)=1-J(A, B)$
+
+```python
+1 - len(c1 & c2) / len(c1 | c2)
+```
+
+```python
+c1 = g.phrase_contexts("cat", topn=None)
+c2 = g.phrase_contexts("dog", topn=None)
+```
+
+Set union of contexts of the words cat and dog
+
+```python
+(c1 & c2).most_common(5)
+```
+
+
+
+```python
+
+```
+
+```python
+
+```
 
 ```python
 
