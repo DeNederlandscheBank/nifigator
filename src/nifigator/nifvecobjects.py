@@ -110,7 +110,7 @@ class NifVectorGraph(NifGraph):
 
         if sentences is not None:
             logging.info(".. Creating windows dict")
-            windows = self.generate_windows(documents=sentences, params=self.params)
+            windows = generate_windows(documents=sentences, params=self.params)
             logging.info(".. Creating phrase and context dicts")
             phrase_count, context_count = self.create_window_phrase_count_dicts(
                 windows=windows

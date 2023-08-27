@@ -15,7 +15,7 @@ jupyter:
 # Introduction to NifVector graphs
 
 
-Similar to word embeddings NifVector graph vector embeddings are defined from words and phrases (multiwords) and the contexts in which they occur. The main difference from traditional word embeddings is that here no dimensionality reduction whatsoever is applied. This enables to obtain some understanding about why certain word are found to be close to each other.
+The NifVector graph embeddings described here are defined from words and phrases (multiwords) and the contexts in which these words and phrases occur in a document corpus. The main difference to traditional word embeddings is that here no dimensionality reduction is applied; and there is no model created with real-valued embeddings. Instead, the NifVector graph embeddings consist of the original sets of the contexts in which phrases occur. They are derived directly from the corpus itself without any transformation. This enables to obtain some understanding about why certain word are found to be close to each other.
 
 ```python
 import os, sys, logging
@@ -103,10 +103,11 @@ This results in:
 
 The phrase 'War and Peace' has three out of four similar contexts.
 
+
 ## Querying the NifVector graph based on DBpedia
 
 
-These are results of a NifVector graph created with 10.000 DBpedia pages. We defined a context of a word in it simplest form: the tuple of the previous word and the next word (no preprocessing, no changes to the text, i.e. no deletion of stopwords and punctuation). The maximum phrase length is five words, the maximum left and right context is three words.
+These are results of a NifVector graph created with 10.000 DBpedia pages. We defined a context of a word in it simplest form: the tuple of the previous multiwords and the next multiwords (no preprocessing, no changes to the text, i.e. no deletion of stopwords and punctuation). The maximum phrase length is five words, the maximum left and right context is three words.
 
 ```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
@@ -121,6 +122,7 @@ store.open((query_endpoint, update_endpoint))
 # Create NifVectorGraph with this store
 g = NifVectorGraph(store=store, identifier=URIRef("https://mangosaurus.eu/dbpedia"))
 ```
+
 
 ### Most frequent contexts
 
@@ -151,9 +153,11 @@ This means that the corpus contains 1031 occurrences of 'It has been', i.e. occu
 
 SENTSTART and SENTEND are tokens to indicate the start and end of a sentence.
 
+
 ### Contexts and phrase similarities
 
-Only specific words and phrases occur in the contexts mentioned above. If you derive the phrases that share the most frequent contexts with the word 'has' then you get the following table (the columns contains the contexts, the rows the phrases that have the most contexts in common):
+
+The contexts in which a word occurs to some extent represent the properties and the meaning of a word. If you can derived the phrases that share the most frequent contexts of the word 'has' you get the following table (the columns contains the contexts, the rows the phrases that have the most contexts in common):
 
 ```python
 import pandas as pd
@@ -177,9 +181,13 @@ may have          46 	17              17   	42   	16  	18  	50      0
 would have        61 	9               6   	2       37   	10   	32      0
 ```
 
-The number of contexts that a word has in common with contexts of another word can be used as a measure of similarity. You see that most of them are forms of the verb 'have'. Contexts ending with 'been' describe perfect tenses. The word 'had' (second row) has 7 contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (seventh row) has 6 contexts in common, so 'would have' is also similar but less similar than the word 'had'. Normally a much higher number of most frequent contexts are used for similarity.
+
+The number of contexts that a word has in common with contexts of another word can be used as a measure of similarity. So, the word 'had' (second row) has 7 contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (seventh row) has 6 contexts in common, so 'would have' is also similar but less similar than the word 'had'. We used a limited number of contexts to show the idea; normally a higher number of contexts are used to compare the similarity of words.
+
+The similarities found can explained as follows. In this case, you see that similar words are all forms of the verb 'have'. This is because the verb is often used in the construction of perfect tenses, where the verb 'have' is combined with the past participle of another verb, in this case the often occuring 'been'.
 
 Note that the list contains 'has not'.
+
 
 ### Top phrase similarities
 
@@ -208,7 +216,7 @@ This results in
 }
 ```
 
-The contexts in which words occur convey a lot of information about these words. Take a look at similar words of 'larger'. If we find the words with the lowest distance of this word in the way described above then we get:
+Now take a look at similar words of 'larger'.
 
 ```python
 # top phrase similarities of the word "larger"
@@ -265,7 +273,12 @@ This results in
 }
 ```
 
-However, what closeness and similarity exactly mean in relation to embeddings is not formalized. As you can see, closeness relates to syntactical closeness as well as semantic closeness without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. the embeddings cannot distinguish the difference between larger and smaller. This is because embeddings are only based on the form of text, and not on meaning. Even if we have all original contexts, then the model would still not be able to distinguish antonyms like large and small.
+However, what closeness and similarity exactly mean in relation to embeddings is not formalized. As you can see, closeness relates to syntactical closeness as well as semantic closeness without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. the embeddings cannot distinguish the difference between the words larger and smaller. This is because embeddings are only based on the form of text, and not on meaning. Even if we have all original contexts, then the model would still not be able to distinguish antonyms like large and small.
+
+```python
+# top phrase similarities of Barack Obama
+g.most_similar("Barack Obama", topn=10, topcontexts=15)
+```
 
 ### Simple 'masks'
 
@@ -313,12 +326,12 @@ for r in g.context_phrases(context, topn=10).items():
 ```
 
 
-
 ### NifVector calculations
 
-We calculate with multisets instead of real-valued vectors.
 
-Different adverbs for the words man and woman (results are highly depended on documents used).
+We calculate with sets of contexts instead of real-valued vectors.
+
+For example, different adverbs for the words man and woman (results are highly depended on documents used).
 
 ```python
 context = ("the", "woman")
@@ -327,49 +340,23 @@ context = ("the", "man")
 c2 = g.context_phrases(context, topn=None)
 ```
 
-Result of set substraction W \ M (adverbs that are used between 'the' and 'woman' but not between 'the' and 'man'.
+Result of set substraction W \ M (adverbs that are used between 'the' and 'woman' but not between 'the' and 'man':
 
 ```python
 (c1 - c2).most_common(5)
 ```
 
-Result of set substraction M \ W
+```console
+[('first', 93), ('sinful', 12), ('pregnant', 5), ('only', 4), ('Hawksian', 3)]
+```
+
+Result of set substraction M \ W (adverbs that are used between 'the' and 'man' but not between 'the' and 'woman':
 
 ```python
 (c2 - c1).most_common(5)
 ```
-
-The distance can be measured with the Jaccard index defined by 
-
-$J(A, B)=$$ | A\bigcap B | \over | A \bigcup B |$
-
-and the Jaccard distance
-
-$d_{J}(A, B)=1-J(A, B)$
-
-```python
-1 - len(c1 & c2) / len(c1 | c2)
-```
-
-```python
-c1 = g.phrase_contexts("cat", topn=None)
-c2 = g.phrase_contexts("dog", topn=None)
-```
-
-Set union of contexts of the words cat and dog
-
-```python
-(c1 & c2).most_common(5)
-```
-
-
-
-```python
-
-```
-
-```python
-
+```console
+[('white', 17), ('young', 16), ('common', 16), ('last', 13), ('great', 11)]
 ```
 
 ```python
