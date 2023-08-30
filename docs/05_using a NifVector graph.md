@@ -15,7 +15,7 @@ jupyter:
 # Introduction to NifVector graphs
 
 
-The NifVector graph embeddings described here are defined from words and phrases (multiwords) and the contexts in which these words and phrases occur in a document corpus. The main difference to traditional word embeddings is that here no dimensionality reduction is applied; and there is no model created with real-valued embeddings. Instead, the NifVector graph embeddings consist of the original sets of the contexts in which phrases occur. They are derived directly from the corpus itself without any transformation. This enables to obtain some understanding about why certain word are found to be close to each other.
+The NifVectors contained in the NifVector Graph are vectors defined by words and phrases (multiwords) and the contexts in which these words and phrases occur in a document corpus. The main difference to traditional word vector embeddings is that no dimensionality reduction is applied; and there is no model created with real-valued vector embeddings. Instead, the NifVectors consist of the original sets of the contexts in which phrases occur. They are derived directly from the corpus itself without any transformation. This enables to obtain some understanding about why certain word are found to be close to each other.
 
 ```python
 import os, sys, logging
@@ -386,9 +386,9 @@ Some phrases have multiple meanings. That a look at the contexts of the word 'de
 g.phrase_contexts("deal", topn=10)
 ```
 
-In some of these contexts 'deal' is a verb in the sense of 'to do business' and in other contexts 'deal' is a noun meaning an arrangement or an agreement.
+In some of these contexts 'deal' is a verb meaning to do business and in other contexts 'deal' is a noun meaning an arrangement or an agreement. The specific meaning can be derived from the context in which the phrase is used.
 
-You can take into account a specific context when calling the most_similar function.
+You can take into account a specific context when using the most_similar function in the following way:
 
 ```python
 g.most_similar(phrase="deal", context=("to", "with"), topcontexts=15, topphrases=15)
