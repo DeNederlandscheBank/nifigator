@@ -101,25 +101,32 @@ print(doc_2)
 To speed up the process we construct a dictionary with phrases and their contexts.
 
 ```python
-from nifigator import STOPWORDS, generate_windows
+from nifigator import STOPWORDS, generate_phrase_context
 
 # setup a dictionary with phrases and their contexts to speed up
-def load_phrase_contexts(documents: list=None, d: dict={}, topn: int=15):
+def load_phrase_contexts(
+    documents: list=None, 
+    d: dict={}, 
+    topn: int=15):
 
     params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
 
     for doc in documents:
 
-        phrases = generate_windows(
-            documents={"id": doc}, 
+        r = generate_phrase_context(
+            document=doc, 
             params=params
-        ).keys()
+        )
 
-        for phrase in phrases:
+        for phrase, context, _ in r:
             phrase_contexts = d.get(phrase, None)
             if phrase_contexts is None:
                 phrase_contexts = g.phrase_contexts(phrase, topn=topn)
                 d[phrase] = phrase_contexts
+            context_phrases = d.get(context, None)
+            if context_phrases is None:
+                context_phrases = g.context_phrases(context, topn=topn)
+                d[context] = context_phrases
     
     return d
 
@@ -132,20 +139,21 @@ Then we need a function to extract from an arbitrary string the phrases and crea
 ```python
 from collections import Counter
 
-def sentence_contexts(s: str=None, d: dict=None):
+def sentence_contexts(doc: str=None, d: dict=None):
     """
     extract the phrases of a string and create dict of phrases with their contexts
     """
     params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
 
-    phrases = generate_windows(
-        documents={"id": s}, 
+    r = generate_phrase_context(
+        document=doc, 
         params=params
-    ).keys()
+    )
 
     c = set()
-    for phrase in phrases:
-        c.update(d.get(phrase, None))
+    for phrase, context, _ in r:
+        c.update(d.get(phrase, set()))
+#         c.update(d.get(context, set()))
         
     return c
 ```
@@ -240,22 +248,27 @@ $support = $ $| A \cap B | \over |A| $
 The sentence with the highest support has the most contexts in common and thus is the closest to the text.
 
 ```python
-def extract_contexts(s: str=None, d: dict=None):
+def extract_contexts(doc: str=None, d: dict=None):
     """
     extract the phrases of a string and create dict of phrases with their contexts
     """
     params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
 
-    phrases = generate_windows(
-        documents={"id": s}, 
+    r = generate_phrase_context(
+        document=doc, 
         params=params
-    ).keys()
-    
+    )
+
     c = dict()
-    for phrase in phrases:
-        c[phrase] = d.get(phrase, None)
+    for phrase, context, _ in r:
+        c[phrase] = d.get(phrase, Counter())
+#         c[context] = d.get(context, Counter())
             
     return c
+```
+
+```python
+
 ```
 
 ```python
@@ -293,10 +306,9 @@ def search(text: str=None, contexts: dict=None, phrase_contexts: dict=None):
 
     # generate contexts of the text
     phrases_1 = extract_contexts(text, phrase_contexts)
-    
     d = {}
     for sent, phrases_2 in contexts.items():
-        
+
         # find the full phrase matches of the text and the sentence
         full_matches = [
             (p1, p2)
@@ -453,6 +465,10 @@ list(d.items())[0:3]
     {('discover', 'identify'): 0.8888888888888888,
      ('did', 'he+was'): 0.9285714285714286,
      ('did', 'was'): 0.9655172413793104})))]
+```
+
+```python
+
 ```
 
 ```python

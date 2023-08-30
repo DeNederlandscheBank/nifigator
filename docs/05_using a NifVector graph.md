@@ -273,12 +273,30 @@ This results in
 }
 ```
 
-However, what closeness and similarity exactly mean in relation to embeddings is not formalized. As you can see, closeness relates to syntactical closeness as well as semantic closeness without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. the embeddings cannot distinguish the difference between the words larger and smaller. This is because embeddings are only based on the form of text, and not on meaning. Even if we have all original contexts, then the model would still not be able to distinguish antonyms like large and small.
 
 ```python
 # top phrase similarities of Barack Obama
 g.most_similar("Barack Obama", topn=10, topcontexts=15)
 ```
+
+```console
+Counter({'Barack Obama': (11, 11),
+         'Franklin D Roosevelt': (4, 11),
+         'Bill Clinton': (3, 11),
+         'George W Bush': (3, 11),
+         'John F Kennedy': (3, 11),
+         'Lukashenko': (3, 11),
+         'Richard Nixon': (3, 11),
+         'Ronald Reagan': (3, 11),
+         'Abraham Lincoln': (2, 11),
+         'Bush': (2, 11)})
+```
+
+
+
+However, what closeness and similarity exactly mean in relation to embeddings is not formalized. As you can see, closeness relates to syntactical closeness as well as semantic closeness without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. the embeddings cannot distinguish the difference between the words larger and smaller. This is because embeddings are only based on the form of text, and not on meaning. Even if we have all original contexts, then the model would still not be able to distinguish antonyms like large and small.
+
+
 
 ### Simple 'masks'
 
@@ -326,7 +344,7 @@ for r in g.context_phrases(context, topn=10).items():
 ```
 
 
-### NifVector calculations
+### Context sets
 
 
 We calculate with sets of contexts instead of real-valued vectors.
@@ -358,6 +376,31 @@ Result of set substraction M \ W (adverbs that are used between 'the' and 'man' 
 ```console
 [('white', 17), ('young', 16), ('common', 16), ('last', 13), ('great', 11)]
 ```
+
+
+### Taking into account the contexts
+
+Some phrases have multiple meanings. That a look at the contexts of the word 'deal'.
+
+```python
+g.phrase_contexts("deal", topn=10)
+```
+
+In some of these contexts 'deal' is a verb in the sense of 'to do business' and in other contexts 'deal' is a noun meaning an arrangement or an agreement.
+
+You can take into account a specific context when calling the most_similar function.
+
+```python
+g.most_similar(phrase="deal", context=("to", "with"), topcontexts=15, topphrases=15)
+```
+
+The results consists of only verbs.
+
+```python
+g.most_similar(phrase="deal", context=("a", "with"), topcontexts=100, topphrases=15)
+```
+
+Now the results are nouns.
 
 ```python
 
