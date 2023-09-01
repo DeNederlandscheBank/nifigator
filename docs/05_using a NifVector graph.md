@@ -17,7 +17,7 @@ jupyter:
 ## Introduction
 
 
-A NifVector graph is a network of phrases and contexts in which they occur in a document set (in Nif). It can be used as if it were a language model.
+A NifVector graph is a network of phrases and contexts that occur in a certain document set (in Nif). It can be used as if it were a language model.
 
 From a Nifvector graph you can derive phrase (multiwords) and context vectors with their frequencies in the document set. The main difference to traditional word vector embeddings is that no dimensionality reduction is applied; and there is no model created with real-valued vector embeddings. Instead, the NifVectors are derived directly from the corpus itself without any transformation.
 
@@ -393,15 +393,15 @@ Result of set substraction M \ W (adverbs that are used between 'the' and 'man' 
 
 ### Phrase similarities given a specific context
 
-Some phrases have multiple meanings. That a look at the contexts of the word 'deal'.
+Some phrases have multiple meanings. Take a look at the contexts of the word 'deal':
 
 ```python
 g.phrase_contexts("deal", topn=10)
 ```
 
-In some of these contexts 'deal' is a verb meaning to do business and in other contexts 'deal' is a noun meaning a contract or an agreement. The specific meaning can be derived from the context in which the phrase is used.
+In some of these contexts 'deal' is a verb meaning 'to do business' and in other contexts 'deal' is a noun meaning a 'contract' or an 'agreement'. The specific meaning can be derived from the context in which the phrase is used.
 
-You can take into account a specific context when using the most_similar function in the following way:
+It is possible to take into account a specific context when using the most_similar function in the following way:
 
 ```python
 g.most_similar(phrase="deal", context=("to", "with"), topcontexts=50, topphrases=15)

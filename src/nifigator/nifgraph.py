@@ -22,16 +22,8 @@ from .nifobjects import (
     NifContextCollection,
     NifSentence,
 )
-from .utils import(
-    tokenize_text
-)
-from .const import(
-    ITSRDF,
-    NIF,
-    OLIA,
-    DEFAULT_URI,
-    DEFAULT_PREFIX
-)
+from .utils import tokenize_text
+from .const import ITSRDF, NIF, OLIA, DEFAULT_URI, DEFAULT_PREFIX
 from .lemonobjects import Lexicon, LexicalEntry, Form
 
 
@@ -436,8 +428,7 @@ class NifGraph(Graph):
     #     return d
 
     def context_graph(self, uri: URIRef = None):
-        """
-        """
+        """ """
         if isinstance(self.store, rdflib.plugins.stores.sparqlstore.SPARQLUpdateStore):
             q = (
                 """
@@ -477,8 +468,8 @@ class NifGraph(Graph):
 
     @property
     def lexicon(self):
-        """
-        """
+        """ """
+
         def noNumber(s: str = ""):
             return not s.replace(".", "", 1).replace(",", "", 1).isdigit()
 
@@ -567,10 +558,8 @@ class NifGraph(Graph):
 
         return lexica
 
-
     def get(self, uri: URIRef = None):
-        """
-        """
+        """ """
         if uri is None:
             return None
         else:
@@ -578,50 +567,24 @@ class NifGraph(Graph):
             if len(r) > 0:
                 rdf_type = r[0][2]
             else:
-                logging.warning("uri not found: "+str(uri))
+                logging.warning("uri not found: " + str(uri))
                 return None
 
             if rdf_type == NIF.ContextCollection:
-                collection = NifContextCollection(
-                    uri=uri,
-                    graph=self
-                )
+                collection = NifContextCollection(uri=uri, graph=self)
                 return collection
             elif rdf_type == NIF.Context:
-                return NifContext(
-                    uri=uri,
-                    graph=self
-                    )
+                return NifContext(uri=uri, graph=self)
             else:
-                context_uri = uri.split("&nif=")[0]+"&nif=context"
+                context_uri = uri.split("&nif=")[0] + "&nif=context"
                 context = NifContext(uri=context_uri, graph=self)
                 if rdf_type == NIF.Sentence:
-                    return NifSentence(
-                        uri=uri,
-                        referenceContext=context, 
-                        graph=self
-                    )
+                    return NifSentence(uri=uri, referenceContext=context, graph=self)
                 elif rdf_type == NIF.Page:
-                    return NifPage(
-                        uri=uri,
-                        referenceContext=context, 
-                        graph=self
-                    )
+                    return NifPage(uri=uri, referenceContext=context, graph=self)
                 elif rdf_type == NIF.Paragraph:
-                    return NifParagraph(
-                        uri=uri,
-                        referenceContext=context, 
-                        graph=self
-                    )
+                    return NifParagraph(uri=uri, referenceContext=context, graph=self)
                 elif rdf_type == NIF.Phrase:
-                    return NifPhrase(
-                        uri=uri,
-                        referenceContext=context, 
-                        graph=self
-                    )
+                    return NifPhrase(uri=uri, referenceContext=context, graph=self)
                 elif rdf_type == NIF.Word:
-                    return NifWord(
-                        uri=uri,
-                        referenceContext=context, 
-                        graph=self
-                    )
+                    return NifWord(uri=uri, referenceContext=context, graph=self)

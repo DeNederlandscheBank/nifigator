@@ -12,6 +12,7 @@ from rdflib.namespace import XSD
 from rdflib.term import Literal
 import syntok.segmenter as segmenter
 
+
 def to_iri(s: str = ""):
     return (
         s.replace('"', "%22")
@@ -22,18 +23,16 @@ def to_iri(s: str = ""):
         .replace(">", "")
         .replace("<", "")
     )
-    
-def tokenize_text(
-    text: list=None,
-    forced_sentence_split_characters: list=[]
-    ):
+
+
+def tokenize_text(text: list = None, forced_sentence_split_characters: list = []):
     """ """
     tokenized_text = tokenizer(text)
     tokenized_new = []
     for sentence in tokenized_text:
         tok_sent = []
         for token in sentence:
-            if token['text'] in forced_sentence_split_characters:
+            if token["text"] in forced_sentence_split_characters:
                 if tok_sent != []:
                     tokenized_new.append(tok_sent)
                 tok_sent = []
@@ -42,7 +41,10 @@ def tokenize_text(
     tokenized_text = tokenized_new
     # delete empty tokens
     if tokenized_text != []:
-        tokenized_text = [sentence if sentence[-1]['text']!="" else sentence[:-1] for sentence in tokenized_text]
+        tokenized_text = [
+            sentence if sentence[-1]["text"] != "" else sentence[:-1]
+            for sentence in tokenized_text
+        ]
     return tokenized_text
 
 

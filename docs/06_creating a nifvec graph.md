@@ -15,7 +15,7 @@ jupyter:
 # Creating NifVector graphs
 
 
-In a NifVector graph vector embeddings are defined from words and phrases, and the original contexts in which they occur (all in Nif). No dimensionality reduction is applied and this enables to obtain some understanding about why certain word are found to be close to each other.
+First connect to a graph database.
 
 ```python
 import os, sys, logging
@@ -52,7 +52,10 @@ g = NifGraph(
 )
 ```
 
+
 ## Add some DBpedia data to graph
+
+
 
 ```python
 from nifigator import NifVectorGraph, NifGraph, URIRef, RDF, NIF, NifContext, tokenize_text, NifSentence
@@ -70,11 +73,11 @@ for j in range(1, 11):
         file=file,
     )
     for context in temp.contexts:
+
         context.extract_sentences(forced_sentence_split_characters=["*"])                            
            
         for r in context.triples([NifSentence]):
             temp.add(r)
-            
             
     nif_graph += temp
 
@@ -82,7 +85,12 @@ g += nif_graph
 
 ```
 
+
 ## Derive NifVector graph from DBpedia
+
+
+Initialize the parameters of the NifVector graph to be generated.
+
 
 ```python
 stop_words = [
@@ -121,12 +129,20 @@ params = {
 }
 ```
 
+
+Collect all Nif context uris.
+
+
 ```python
 from nifigator import RDF, NIF
 
 # extract uris of all contexts
 context_uris = list(nif_graph.subjects(RDF.type, NIF.Context))
 ```
+
+
+Then generate the NifVector graph in batches of 1.000 DBpedia pages.
+
 
 ```python
 from nifigator import NifVectorGraph

@@ -21,12 +21,7 @@ from .const import (
     mapobject,
     upos2olia,
 )
-from .utils import (
-    tokenize_text,
-    delete_accents, 
-    delete_diacritics, 
-    natural_sort
-)
+from .utils import tokenize_text, delete_accents, delete_diacritics, natural_sort
 
 
 class NifContext:
@@ -772,16 +767,13 @@ class NifContext(NifString):
                 for triple in phrase.triples(objects=objects):
                     yield triple
 
-    def extract_sentences(
-        self, 
-        forced_sentence_split_characters: list=[]
-    ):
+    def extract_sentences(self, forced_sentence_split_characters: list = []):
         """
         Tokenize the string of the context and add sentences to the context
         """
         text_dict = tokenize_text(
-            self.isString, 
-            forced_sentence_split_characters=forced_sentence_split_characters
+            self.isString,
+            forced_sentence_split_characters=forced_sentence_split_characters,
         )
         if text_dict is not None:
             sent_list = []
@@ -796,12 +788,14 @@ class NifContext(NifString):
             self.set_Sentences(sent_list)
 
     def load_sentences(self):
-        """
-        """
+        """ """
         sent_uris = natural_sort(
             [
-                s for s in self.graph.subjects(predicate=NIF.referenceContext, object=self.uri)
-                if list(self.graph.triples([s, RDF.type, NIF.Sentence]))!=[]
+                s
+                for s in self.graph.subjects(
+                    predicate=NIF.referenceContext, object=self.uri
+                )
+                if list(self.graph.triples([s, RDF.type, NIF.Sentence])) != []
             ]
         )
         nifsentences = []
@@ -859,8 +853,11 @@ class NifContext(NifString):
     def load_pages(self):
         page_uris = natural_sort(
             [
-                s for s in self.graph.subjects(predicate=NIF.referenceContext, object=self.uri)
-                if list(self.graph.triples([s, RDF.type, NIF.Page]))!=[]
+                s
+                for s in self.graph.subjects(
+                    predicate=NIF.referenceContext, object=self.uri
+                )
+                if list(self.graph.triples([s, RDF.type, NIF.Page])) != []
             ]
         )
         self.set_Pages(
@@ -879,8 +876,11 @@ class NifContext(NifString):
     def load_paragraphs(self):
         para_uris = natural_sort(
             [
-                s for s in self.graph.subjects(predicate=NIF.referenceContext, object=self.uri)
-                if list(self.graph.triples([s, RDF.type, NIF.Paragraph]))!=[]
+                s
+                for s in self.graph.subjects(
+                    predicate=NIF.referenceContext, object=self.uri
+                )
+                if list(self.graph.triples([s, RDF.type, NIF.Paragraph])) != []
             ]
         )
         # extract paragraphs from graph
@@ -899,8 +899,11 @@ class NifContext(NifString):
     def load_phrases(self):
         phrase_uris = natural_sort(
             [
-                s for s in self.graph.subjects(predicate=NIF.referenceContext, object=self.uri)
-                if list(self.graph.triples([s, RDF.type, NIF.Phrase]))!=[]
+                s
+                for s in self.graph.subjects(
+                    predicate=NIF.referenceContext, object=self.uri
+                )
+                if list(self.graph.triples([s, RDF.type, NIF.Phrase])) != []
             ]
         )
         # extract phrases from graph
@@ -2051,10 +2054,7 @@ class NifContextCollection(NifBase):
     def load_contexts(self):
         contexts = []
         for item in self.graph.objects(subject=self.uri, predicate=NIF.hasContext):
-            contexts.append(NifContext(
-                uri=item,
-                graph=self.graph
-            ))
+            contexts.append(NifContext(uri=item, graph=self.graph))
         self.set_hasContext(contexts)
 
     @property
