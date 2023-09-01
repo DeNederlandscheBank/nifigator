@@ -356,8 +356,6 @@ class NifVectorGraph(NifGraph):
     SELECT DISTINCT ?v (sum(?count) as ?n)
     WHERE
     {\n"""
-        # if not isinstance(self.store, memory.Memory):
-        #     q += "SERVICE <" + self.store.query_endpoint + "> "
         q += (
             """
         {
@@ -429,8 +427,6 @@ class NifVectorGraph(NifGraph):
     SELECT distinct ?v (count(?c) as ?num1)
     WHERE
     {\n"""
-        # if not isinstance(self.store, memory.Memory):
-        #     q += "SERVICE <" + self.store.query_endpoint + "> "
         q += (
             """
         {
@@ -497,8 +493,6 @@ class NifVectorGraph(NifGraph):
     SELECT distinct ?v (sum(?count) as ?num)
     WHERE
     {\n"""
-        # if not isinstance(self.store, memory.Memory):
-        #     q += "SERVICE <" + self.store.query_endpoint + "> "
         q += (
             """
         {
@@ -580,8 +574,6 @@ class NifVectorGraph(NifGraph):
     SELECT distinct ?v (sum(?s) as ?num)
     WHERE
     {\n"""
-        # if not isinstance(self.store, memory.Memory):
-        #     q += "SERVICE <" + self.store.query_endpoint + "> "
         q += (
             """
         {

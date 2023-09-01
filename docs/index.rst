@@ -15,9 +15,10 @@ Contents
    PDF documents pipeline <02_adding_document_data>
    Adding annotations <03_adding_annotations>
    Using a SPARQL endpoint <04_using a SPARQL endpoint>
-   Introduction to NifVector graphs <05_using a NifVector graph>
-   Creating a NifVector graph <06_creating a nifvec graph>
-   Using a NifVector graph for sentence similarities and searching <07_Sentence similarities>
+   NifVector graphs <05_using a NifVector graph>
+   Creating NifVector graphs <06_creating a nifvec graph>
+   Sentence similarities en text search <07_Sentence similarities>
+   SPARQL queries for NifVector <08_SPARQL queries for NifVector>
    Using Ontolex-Lemon <10_using_a_lemon_termbase>
    Contributions & Help <contributing>
    License <license>
@@ -39,12 +40,3 @@ Indices and tables
 .. _Python domain syntax: https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#the-python-domain
 .. _Sphinx: https://www.sphinx-doc.org/
 .. _Python: https://docs.python.org/
-.. _Numpy: https://numpy.org/doc/stable
-.. _SciPy: https://docs.scipy.org/doc/scipy/reference/
-.. _matplotlib: https://matplotlib.org/contents.html#
-.. _Pandas: https://pandas.pydata.org/pandas-docs/stable
-.. _Scikit-Learn: https://scikit-learn.org/stable
-.. _autodoc: https://www.sphinx-doc.org/en/master/ext/autodoc.html
-.. _Google style: https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
-.. _NumPy style: https://numpydoc.readthedocs.io/en/latest/format.html
-.. _classical style: https://www.sphinx-doc.org/en/master/domains.html#info-field-lists

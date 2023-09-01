@@ -12,10 +12,16 @@ jupyter:
     name: python3
 ---
 
-# Introduction to NifVector graphs
+# NifVector graphs
+
+## Introduction
 
 
-The NifVectors contained in the NifVector Graph are vectors defined by words and phrases (multiwords) and the contexts in which these words and phrases occur in a document corpus. The main difference to traditional word vector embeddings is that no dimensionality reduction is applied; and there is no model created with real-valued vector embeddings. Instead, the NifVectors consist of the original sets of the contexts in which phrases occur. They are derived directly from the corpus itself without any transformation. This enables to obtain some understanding about why certain word are found to be close to each other.
+A NifVector graph is a network of phrases and contexts in which they occur in a document set (in Nif). It can be used as if it were a language model.
+
+From a Nifvector graph you can derive phrase (multiwords) and context vectors with their frequencies in the document set. The main difference to traditional word vector embeddings is that no dimensionality reduction is applied; and there is no model created with real-valued vector embeddings. Instead, the NifVectors are derived directly from the corpus itself without any transformation.
+
+The phrase and context vectors can be used for word and sentence similarities, and for search engines. They can also be combined to create a vector that is a representation of the phrase with the context in which it occurs.
 
 ```python
 import os, sys, logging
@@ -24,7 +30,7 @@ logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO)
 ```
 
-## Simple NifVector graph example to introduce the idea
+### Simple NifVector graph example to introduce the idea
 
 Let's setup a nif graph with a context with two sentences.
 
@@ -36,8 +42,8 @@ from nifigator import NifGraph, NifContext, OffsetBasedString, NifContextCollect
 context = NifContext(
   uri="https://mangosaurus.eu/rdf-data/doc_1",
   URIScheme=OffsetBasedString,
-  isString="""Leo Tolstoy wrote the book War and Peace. 
-              Jane Austen wrote the book Pride and Prejudice."""
+  isString="""We went to the park to walk. 
+              Yesterday, we went to the city to do some shopping."""
 )
 context.extract_sentences()
 # Make a collection by passing a uri
@@ -56,52 +62,57 @@ params = {
     "min_phrase_count": 1, 
     "min_context_count": 1,
     "min_phrasecontext_count": 1,
-    "max_phrase_length": 4,
-    "max_left_length": 4,
-    "max_right_length": 4,
+    "max_phrase_length": 3,
+    "max_left_length": 3,
+    "max_right_length": 3,
 }
 
 # the NifVector graph can be created from a NifGraph and a set of optional parameters
-vec_graph = NifVectorGraph(
+g = NifVectorGraph(
     nif_graph=nif_graph, 
     params=params
 )
 ```
 
-The phrase contexts of'the phrase 'War and Peace' are found in this way.
+The contexts of the work 'park' are found in this way.
 
 ```python
-phrase = "War and Peace"
-vec_graph.phrase_contexts(phrase)
+phrase = "park"
+g.phrase_contexts(phrase)
 ```
 
 Resulting in the following contexts:
 
 ```console
-{('book', 'SENTEND'): 1,
- ('the+book', 'SENTEND'): 1,
- ('wrote+the+book', 'SENTEND'): 1,
- ('Tolstoy+wrote+the+book', 'SENTEND'): 1}
+Counter({('the', 'to'): 1,
+         ('the', 'to+walk'): 1,
+         ('the', 'to+walk+SENTEND'): 1,
+         ('to+the', 'to'): 1,
+         ('to+the', 'to+walk'): 1,
+         ('to+the', 'to+walk+SENTEND'): 1,
+         ('went+to+the', 'to'): 1,
+         ('went+to+the', 'to+walk'): 1,
+         ('went+to+the', 'to+walk+SENTEND'): 1})
  ```
 
 
-So the context ('book', 'SENTEND') with the phrase 'War and Peace' occurs once in the text. You see that contrary to the original Word2Vec model multiple word contexts are generated with '+' as word separator.
+So the context ('the', 'to+walk+SENTEND') with the phrase 'park' occurs once in the text. You see that contrary to the original Word2Vec model multiple word contexts are generated with '+' as word separator.
 
-Now we can find the most similar phrases of the phrase 'Pride and Prejudice'.
+Now we can find the most similar words of the word 'park'.
+
 
 ```python
-phrase = "Pride and Prejudice"
-vec_graph.most_similar(phrase)
+phrase = "park"
+g.most_similar(phrase)
 ```
 
 This results in:
 
 ```console
-{'Pride and Prejudice': (4, 4), 'War and Peace': (3, 4)}
+{'park': (9, 9), 'city': (3, 9)}
 ```
 
-
-The phrase 'War and Peace' has three out of four similar contexts.
+The word 'city' has three out of nine similar contexts.
 
 
 ## Querying the NifVector graph based on DBpedia
@@ -137,19 +148,19 @@ g.phrase_contexts("has", topn=10)
 This results in
 
 ```console
-{('It', 'been'): 1031,
- ('it', 'been'): 1021,
- ('SENTSTART+It', 'been'): 848,
- ('and', 'been'): 642,
- ('which', 'been'): 414,
- ('that', 'been'): 390,
- ('also', 'a'): 388,
- ('and', 'a'): 380,
- ('there', 'been'): 378,
- ('it', 'a'): 326}
+Counter({('it', 'been'): 1021,
+         ('SENTSTART+It', 'been'): 858,
+         ('It', 'been'): 827,
+         ('and', 'been'): 575,
+         ('that', 'been'): 428,
+         ('there', 'been'): 420,
+         ('which', 'been'): 420,
+         ('also', 'a'): 388,
+         ('and', 'a'): 323,
+         ('which', 'a'): 233})
 ```
 
-This means that the corpus contains 1031 occurrences of 'It has been', i.e. occurrences where the word 'has' occurred in the context ('It', 'been').
+This means that the corpus contains 1021 occurrences of 'it has been', i.e. occurrences where the word 'has' occurred in the context ('it', 'been').
 
 SENTSTART and SENTEND are tokens to indicate the start and end of a sentence.
 
@@ -182,7 +193,7 @@ would have        61 	9               6   	2       37   	10   	32      0
 ```
 
 
-The number of contexts that a word has in common with contexts of another word can be used as a measure of similarity. So, the word 'had' (second row) has 7 contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (seventh row) has 6 contexts in common, so 'would have' is also similar but less similar than the word 'had'. We used a limited number of contexts to show the idea; normally a higher number of contexts are used to compare the similarity of words.
+The number of contexts that a word has in common with contexts of another word can be used as a measure of similarity. So, the word 'had' (second row) has eight contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (seventh row) has seven contexts in common, so 'would have' is also similar but less similar than the word 'had'. We used a limited number of contexts to show the idea; normally a higher number of contexts are used to compare the similarity of words.
 
 The similarities found can explained as follows. In this case, you see that similar words are all forms of the verb 'have'. This is because the verb is often used in the construction of perfect tenses, where the verb 'have' is combined with the past participle of another verb, in this case the often occuring 'been'.
 
@@ -274,6 +285,9 @@ This results in
 ```
 
 
+
+Instead of single words we can also find the similarities of multiwords
+
 ```python
 # top phrase similarities of Barack Obama
 g.most_similar("Barack Obama", topn=10, topcontexts=15)
@@ -294,8 +308,7 @@ Counter({'Barack Obama': (11, 11),
 
 
 
-However, what closeness and similarity exactly mean in relation to embeddings is not formalized. As you can see, closeness relates to syntactical closeness as well as semantic closeness without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. the embeddings cannot distinguish the difference between the words larger and smaller. This is because embeddings are only based on the form of text, and not on meaning. Even if we have all original contexts, then the model would still not be able to distinguish antonyms like large and small.
-
+As you can see, similarity relates to syntactical similarity as well as semantic similarity without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. with the context vector you cannot distinguish the difference between the words larger and smaller. This is because we only use the form of text, and not its meaning.
 
 
 ### Simple 'masks'
@@ -378,7 +391,7 @@ Result of set substraction M \ W (adverbs that are used between 'the' and 'man' 
 ```
 
 
-### Taking into account the contexts
+### Phrase similarities given a specific context
 
 Some phrases have multiple meanings. That a look at the contexts of the word 'deal'.
 
@@ -386,22 +399,57 @@ Some phrases have multiple meanings. That a look at the contexts of the word 'de
 g.phrase_contexts("deal", topn=10)
 ```
 
-In some of these contexts 'deal' is a verb meaning to do business and in other contexts 'deal' is a noun meaning an arrangement or an agreement. The specific meaning can be derived from the context in which the phrase is used.
+In some of these contexts 'deal' is a verb meaning to do business and in other contexts 'deal' is a noun meaning a contract or an agreement. The specific meaning can be derived from the context in which the phrase is used.
 
 You can take into account a specific context when using the most_similar function in the following way:
 
 ```python
-g.most_similar(phrase="deal", context=("to", "with"), topcontexts=15, topphrases=15)
+g.most_similar(phrase="deal", context=("to", "with"), topcontexts=50, topphrases=15)
 ```
+
+```console
+{'deal': (50, 50),
+ 'work': (17, 50),
+ 'play': (10, 50),
+ 'compete': (7, 50),
+ 'cope': (6, 50),
+ 'coincide': (5, 50),
+ 'comply': (5, 50),
+ 'interact': (5, 50),
+ 'help': (4, 50),
+ 'meet': (4, 50),
+ 'be confused': (3, 50),
+ 'communicate': (3, 50),
+ 'do': (3, 50),
+ 'live': (3, 50),
+ 'be associated': (2, 50)}
+```
+
 
 The results consists of only verbs.
 
 ```python
-g.most_similar(phrase="deal", context=("a", "with"), topcontexts=100, topphrases=15)
+g.most_similar(phrase="deal", context=("a", "with"), topcontexts=5000, topphrases=15)
 ```
+
+```console
+{'deal': (50, 50),
+ 'contract': (13, 50),
+ 'treaty': (12, 50),
+ 'meeting': (11, 50),
+ 'relationship': (11, 50),
+ 'problem': (10, 50),
+ 'man': (9, 50),
+ 'person': (8, 50),
+ 'partnership': (7, 50),
+ 'coalition': (6, 50),
+ 'collaboration': (4, 50),
+ 'friendship': (3, 50),
+ 'joint venture': (3, 50),
+ 'duet': (1, 50),
+ 'female householder': (1, 50)
+}
+```
+
 
 Now the results are nouns.
-
-```python
-
-```
