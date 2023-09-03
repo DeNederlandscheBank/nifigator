@@ -135,6 +135,10 @@ g = NifVectorGraph(store=store, identifier=URIRef("https://mangosaurus.eu/dbpedi
 ```
 
 
+```python
+# g.compact()
+```
+
 ### Most frequent contexts
 
 
@@ -237,18 +241,16 @@ g.most_similar("larger", topn=10, topcontexts=15)
 Resulting in:
 
 ```console
-{
- 'larger': (15, 15),
+{'larger': (15, 15),
  'smaller': (14, 15),
  'greater': (12, 15),
- 'higher': (11, 15),
- 'less': (11, 15),
- 'lower': (11, 15),
+ 'higher': (12, 15),
  'better': (10, 15),
+ 'less': (10, 15),
  'longer': (10, 15),
- 'more': (10, 15),
- 'faster': (9, 15)
-}
+ 'lower': (10, 15),
+ 'faster': (9, 15),
+ 'more': (9, 15)}
 ```
 
 Like the word 'larger', these are all comparative adjectives. These words are close because they share the most frequent contexts. In general, you can derive (to some extent) the word class (the part of speech tag and the morphological features) from the contexts in which a word occurs. For example, if the previous word is 'the' and the next word is 'of' then the word between these words will probably be a noun. The word between 'have' and 'been' is almost always an adverb, the word between 'the' and 'book' is almost always an adjective. Likewise, there are contexts that indicate the grammatical number, the verb tense, and so on.
@@ -258,6 +260,19 @@ Some contexts are close to each other in the sense that the same words occur in 
 ```python
 # top phrase similarities of the word "given"
 g.most_similar("given", topn=10, topcontexts=15)
+```
+
+```console
+{'given': (15, 15),
+ 'considered': (12, 15),
+ 'offered': (12, 15),
+ 'used': (12, 15),
+ 'built': (11, 15),
+ 'called': (11, 15),
+ 'found': (11, 15),
+ 'granted': (11, 15),
+ 'made': (11, 15),
+ 'released': (11, 15)}
 ```
 
 Contexts can also be used to find 'semantic' similarities.
@@ -270,18 +285,16 @@ g.most_similar("King", topn=10, topcontexts=15)
 This results in
 
 ```console
-{
- 'King': (15, 15),
- 'Emperor': (7, 15),
- 'Queen': (7, 15),
- 'king': (7, 15),
- 'Chief Justice': (6, 15),
- 'Church': (6, 15),
- 'City': (6, 15),
- 'Director': (6, 15),
- 'Governor': (6, 15),
- 'House': (6, 15)
-}
+{'King': (15, 15),
+ 'Emperor': (6, 15),
+ 'President': (6, 15),
+ 'Queen': (6, 15),
+ 'king': (6, 15),
+ 'Apostle': (5, 15),
+ 'Chief Justice': (5, 15),
+ 'Church': (5, 15),
+ 'City': (5, 15),
+ 'Director': (5, 15)}
 ```
 
 
@@ -325,15 +338,15 @@ for r in g.context_phrases(context, topn=10).items():
 
 ```console
 ('Henry VIII', 11)
-('Edward I', 10)
 ('Edward III', 6)
 ('Charles II', 5)
+('Edward I', 5)
 ('Edward IV', 5)
 ('Henry III', 5)
 ('Henry VII', 5)
 ('James I', 5)
 ('John', 5)
-('Richard I', 4)
+('Henry II', 3)
 ```
 
 ```python
@@ -345,15 +358,15 @@ for r in g.context_phrases(context, topn=10).items():
 
 ```console
 ('largest', 156)
-('capital', 148)
+('capital', 141)
 ('old', 62)
-('inner', 48)
+('inner', 47)
 ('first', 42)
 ('second largest', 38)
-('capital and largest', 33)
 ('Greek', 26)
 ('most populous', 26)
-('south of the', 26)
+('modern', 23)
+('ancient', 20)
 ```
 
 
@@ -429,7 +442,7 @@ g.most_similar(phrase="deal", context=("to", "with"), topcontexts=50, topphrases
 The results consists of only verbs.
 
 ```python
-g.most_similar(phrase="deal", context=("a", "with"), topcontexts=5000, topphrases=15)
+g.most_similar(phrase="deal", context=("a", "with"), topcontexts=50, topphrases=15)
 ```
 
 ```console

@@ -526,6 +526,44 @@ class NifVectorGraph(NifGraph):
         )
         return results
 
+    def compact(self):
+        """
+        This function compacts the NifVector graph by replacing all hasCount triples by one sum hasCount triple
+        """
+        logging.info("Compacting")
+        logging.info(".. stage 1 / 3")
+        self.update(
+            """
+        INSERT { ?s nifvec:hasTotalCount ?tc }
+        WHERE {
+            {
+                SELECT ?s (sum(?c) as ?tc)
+                WHERE {
+                    ?s nifvec:hasCount ?c 
+                }
+                GROUP BY ?s
+            }
+        }
+        """
+        )
+        logging.info(".. stage 2 / 3")
+        self.update(
+            """
+        DELETE { ?s nifvec:hasCount ?c }
+        WHERE { ?s nifvec:hasCount ?c }
+        """
+        )
+        logging.info(".. stage 3 / 3")
+        self.update(
+            """
+        DELETE { ?s nifvec:hasTotalCount ?c }
+        INSERT { ?s nifvec:hasCount ?c }
+        WHERE { ?s nifvec:hasTotalCount ?c }
+        """
+        )
+        logging.info(".. finished")
+        return None
+
 
 def generate_windows(documents: dict = None, params: dict = {}):
     """ """

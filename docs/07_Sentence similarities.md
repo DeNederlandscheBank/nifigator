@@ -311,7 +311,7 @@ def search(text: str=None, contexts: dict=None, phrase_contexts: dict=None):
                     (p1, p2): 1 - jaccard_index(c1, c2)
                     for p1, c1 in phrases_1.items()
                     for p2, c2 in phrases_2.items()
-                    if 1 - jaccard_index(c1, c2) < 1 and 
+                    if 1 - support_index(c1, c2) < 1 and 
                        p1 not in [p[0] for p in full_matches] and 
                        p2 not in [p[1] for p in full_matches]
         }
