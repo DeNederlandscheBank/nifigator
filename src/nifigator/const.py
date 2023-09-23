@@ -43,16 +43,12 @@ MIN_PHRASE_COUNT = "min_phrase_count"
 MIN_CONTEXT_COUNT = "min_context_count"
 MIN_PHRASECONTEXT_COUNT = "min_phrasecontext_count"
 MAX_PHRASE_LENGTH = "max_phrase_length"
-MAX_LEFT_LENGTH = "max_left_length"
-MAX_RIGHT_LENGTH = "max_right_length"
-MIN_LEFT_LENGTH = "min_left_length"
-MIN_RIGHT_LENGTH = "min_right_length"
+MAX_CONTEXT_LENGTH = "max_context_length"
 CONTEXT_SEPARATOR = "context_separator"
 PHRASE_SEPARATOR = "phrase_separator"
 WORDS_FILTER = "words_filter"
+TRIPLE_BATCH_SIZE = "triple_batch_size"
 FORCED_SENTENCE_SPLIT_CHARACTERS = "force_sentence_split_characters"
-DEFAULT_CONTEXT_SEPARATOR = "_"
-DEFAULT_PHRASE_SEPARATOR = "+"
 
 STOPWORDS = [
     "a",

@@ -289,6 +289,8 @@ class ComponentList(LemonBase):
                 comp_uri = next_comp
             else:
                 yield (comp_uri, RDF.rest, RDF.nil)
+            for triple in comp.triples():
+                yield triple
 
 
 class Form(LemonBase, LemonElement):
@@ -394,14 +396,14 @@ class Form(LemonBase, LemonElement):
                 yield (
                     URIRef(self.uri + "#" + self._formVariant),
                     ONTOLEX.writtenRep,
-                    Literal(line),
+                    Literal(line, datatype=XSD.string),
                 )
         if self.representations is not None:
             for line in self.representations:
                 yield (
                     URIRef(self.uri + "#" + self._formVariant),
                     ONTOLEX.representation,
-                    Literal(line),
+                    Literal(line, datatype=XSD.string),
                 )
 
     def load(self, graph: Graph = None, uri: URIRef = None):

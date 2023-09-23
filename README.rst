@@ -31,7 +31,11 @@ Here is what is does:
 
   - Currently supported processor: `Stanza <https://stanfordnlp.github.io/stanza/>`_
 
-* Create NIF Vector graph to find phrase and sentences similarities
+* Create NIF Vector graphs that work like language models, this allow you
+  
+  - to create explainable word vectors without random results
+
+  - to combine word vectors with linguistic annotations
 
 * RDFLib is used to serialize and deserialize NIF data.
 

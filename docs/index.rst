@@ -11,15 +11,15 @@ Contents
    :maxdepth: 2
 
    Installation <readme>
-   Short overview <01_short_overview>
-   PDF documents pipeline <02_adding_document_data>
-   Adding annotations <03_adding_annotations>
-   Using a SPARQL endpoint <04_using a SPARQL endpoint>
-   NifVector graphs <05_using a NifVector graph>
-   Creating NifVector graphs <06_creating a nifvec graph>
-   Sentence similarities en text search <07_Sentence similarities>
-   SPARQL queries for NifVector <08_SPARQL queries for NifVector>
-   Using Ontolex-Lemon <10_using_a_lemon_termbase>
+   01_short_overview
+   02_adding_document_data
+   03_adding_annotations
+   04_using a SPARQL endpoint
+   05_using a NifVector graph
+   06_creating a nifvec graph
+   07_Sentence similarities
+   08_SPARQL queries for NifVector
+   10_using_a_lemon_termbase
    Contributions & Help <contributing>
    License <license>
    Authors <authors>

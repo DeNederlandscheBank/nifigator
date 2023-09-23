@@ -12,11 +12,11 @@ jupyter:
     name: python3
 ---
 
-# Adding annotations
+## Adding annotations
 
 You can add annotations to the Nif data in the following way.
 
-## Entity occurrences
+### Entity occurrences
 
 First we create a collection with one context.
 

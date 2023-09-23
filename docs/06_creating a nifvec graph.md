@@ -14,15 +14,14 @@ jupyter:
 
 # Creating NifVector graphs
 
-
-First connect to a graph database.
-
 ```python
 import os, sys, logging
 logging.basicConfig(stream=sys.stdout, 
                     format='%(asctime)s %(message)s',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 ```
+
+First connect to a graph database.
 
 ```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
@@ -41,58 +40,7 @@ identifier = URIRef("https://mangosaurus.eu/dbpedia")
 
 ```python
 lang = 'en'
-```
 
-```python
-from nifigator import NifGraph
-
-g = NifGraph(
-    store=store,
-    identifier=identifier,
-)
-```
-
-
-## Add some DBpedia data to graph
-
-
-
-```python
-from nifigator import NifVectorGraph, NifGraph, URIRef, RDF, NIF, NifContext, tokenize_text, NifSentence
-
-nif_graph = NifGraph(
-    identifier=identifier,
-)
-
-for j in range(1, 11):
-    
-    file = os.path.join("E:\\data\\dbpedia\\extracts\\", lang, "dbpedia_"+"{:04d}".format(j)+"_lang="+lang+".ttl")
-
-    temp = NifGraph(
-        identifier=identifier,
-        file=file,
-    )
-    for context in temp.contexts:
-
-        context.extract_sentences(forced_sentence_split_characters=["*"])                            
-           
-        for r in context.triples([NifSentence]):
-            temp.add(r)
-            
-    nif_graph += temp
-
-g += nif_graph
-
-```
-
-
-## Derive NifVector graph from DBpedia
-
-
-Initialize the parameters of the NifVector graph to be generated.
-
-
-```python
 stop_words = [
     
 #     'i', 'me', 'my', 'myself',
@@ -112,16 +60,13 @@ stop_words = [
     'over', 'under', 'further'
 ]
 
+# set the parameters to create the NifVector graph
 params = {
-    "min_phrase_count": 2, 
+    "min_phrase_count": 2,
     "min_context_count": 2,
     "min_phrasecontext_count": 2,
     "max_phrase_length": 5,
-    "max_left_length": 3,
-    "max_right_length": 3,
-    "min_left_length": 1,
-    "min_right_length": 1,
-    "min_window_relation_count": 2,
+    "max_context_length": 5,
     "words_filter": {
         "data": stop_words,
         "name": "nifvec.stopwords"
@@ -130,36 +75,74 @@ params = {
 ```
 
 
-Collect all Nif context uris.
+## Add some DBpedia data to graph
+
 
 
 ```python
-from nifigator import RDF, NIF
+from nifigator import NifGraph, NifSentence
 
-# extract uris of all contexts
-context_uris = list(nif_graph.subjects(RDF.type, NIF.Context))
+nif_graph = NifGraph(
+    identifier=identifier,
+)
+
+context_uris = list()
+
+for j in range(1, 11):
+    
+    file = os.path.join("E:\\data\\dbpedia\\extracts\\", lang, "dbpedia_"+"{:04d}".format(j)+"_lang="+lang+".ttl")
+
+    temp = NifGraph(
+        identifier=identifier,
+        file=file,
+    )
+    for context in temp.contexts:
+        
+        context.extract_sentences(forced_sentence_split_characters=["*"])                            
+
+        for r in context.triples([NifSentence]):
+            temp.add(r)
+
+        context_uris.append(context.uri)
+
+    nif_graph += temp
 ```
-
-
-Then generate the NifVector graph in batches of 1.000 DBpedia pages.
 
 
 ```python
 from nifigator import NifVectorGraph
 
-# add the NifVectorGraph derived from the document strings to the Nif graph
-for i in range(0, 10):
+chunk_size = 2000
+
+for i in range(0, 5):
 
     nifvec_graph = NifVectorGraph(
+        store=store,
         identifier=identifier,
         params=params,
-        context_uris=context_uris[i*1000:(i+1)*1000],
+        context_uris=context_uris[i*chunk_size:(i+1)*chunk_size],
         nif_graph=nif_graph
     )
-    
-    g += nifvec_graph
-    
-    del nifvec_graph
+```
+
+```python
+nifvec_graph += nif_graph
+```
+
+```python
+nifvec_graph.compact()
+```
+
+```python
+!curl -XPOST http://localhost:3030/$/compact/dbpedia_en
+```
+
+```python
+g = NifGraph(
+    store=store,
+    identifier=identifier,
+)
+g += nif_graph
 ```
 
 ```python

@@ -12,13 +12,17 @@ jupyter:
     name: python3
 ---
 
-## Sentence similarities and text search
+# Sentence similarities and text search
 
 
-For a sentence we can take the union of the contexts of the phrases in the sentence, similar to adding the vector embeddings of the words in a sentence to calculate the sentence vector embeddings.
+This shows an example how to use the vectors to find sentence similarities and to search in text given a text query.
+
+The vector representation of a sentence is simply the union of the vectors of the phrases (and possibly contexts) in the sentence, similar to adding vector embeddings of the words in a sentence to calculate the sentence vector embeddings.
 
 
-### Set up the graph database
+## Load and set up two DBpedia pages
+
+First we connect to the database
 
 ```python
 import os, sys, logging
@@ -47,18 +51,14 @@ g = NifVectorGraph(
 )
 ```
 
-
-### Extracting contexts in sentences
-
-
-We take two pages from DBpedia about two stars. 
+We take two pages from DBpedia about two stars, Aldebaran and Antares. 
 
 ```python
 # Read two documents in DBpedia about Aldebaran and Antares stars
-doc_1 = g.get(
+doc1 = g.get(
     URIRef("http://dbpedia.org/resource/Aldebaran?dbpv=2020-07&nif=context")
 )
-doc_2 = g.get(
+doc2 = g.get(
     URIRef("http://dbpedia.org/resource/Antares?dbpv=2020-07&nif=context")
 )
 ```
@@ -66,7 +66,7 @@ doc_2 = g.get(
 The first document reads:
 
 ```python
-print(doc_1)
+print(doc1)
 ```
 
 ```console
@@ -81,7 +81,7 @@ print(doc_1)
 THe second document reads:
 
 ```python
-print(doc_2)
+print(doc2)
 ```
 
 ```console
@@ -94,139 +94,98 @@ print(doc_2)
 ```
 
 
-### Extract phrase contexts from graph database
+## Extract vectors from graph database
 
 
-To speed up the process we construct a dictionary with phrases and their contexts.
+To speed up the process we construct a dictionary with the vectors of phrases and contexts.
 
 ```python
-from nifigator import STOPWORDS, generate_phrase_context
-
+from nifigator import preprocess
 # setup a dictionary with phrases and their contexts to speed up
-def load_vectors(
-    documents: list=None, 
-    d: dict={}, 
-    topn: int=15):
-
-    params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
-
-    for doc in documents:
-        r = generate_phrase_context(
-            document=doc, 
-            params=params
-        )
-        for phrase, context, _ in r:
-            if d.get(phrase, None) is None:
-                d[phrase] = g.phrase_contexts(phrase, topn=topn)
-            if d.get(context, None) is None:
-                d[context] = g.context_phrases(context, topn=topn)
-    return d
-
-phrase_contexts = load_vectors([doc_1.isString, doc_2.isString])
+phrase_vectors = g.load_vectors(
+    documents={'doc1': doc1.isString, 'doc2': doc2.isString},
+    includeOtherForms=False
+)
 ```
 
 Then we need a function to extract from an arbitrary string the phrases and create a dictionary with the phrase in the sentence and their contexts.
 
 
-```python
-from collections import Counter
-
-def sentence_contexts(doc: str=None, d: dict=None):
-    """
-    extract the phrases of a string and create dict of phrases with their contexts
-    """
-    params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
-
-    r = generate_phrase_context(
-        document=doc, 
-        params=params
-    )
-
-    c = set()
-    for phrase, context, _ in r:
-        c.update(d.get(phrase, set()))
-#         c.update(d.get(context, set()))
-        
-    return c
-```
-
-
-### Find similar sentences
+## Find similar sentences
 
 For sentences similarities we sum the contexts of the all the phrases in the sentences, thereby obtaining a multiset representation of the sentence. Then we calculate the Jaccard distance between the sentences and sort with increasing distance.
 
 The Jaccard index is
 
-$J(A, B) = $ $| A \bigcap B | \over |A \bigcup B| $
-
-
-```python
-from fractions import Fraction
-
-def jaccard_index(
-    c1: set=None, 
-    c2: set=None
-):
-    """
-    Function to calculate the Jaccard index of two sets
-    """
-    denom = len(c1 | c2)
-    if denom != 0:
-        return Fraction(len(c1 & c2), denom)
-    else:
-        return 0
+```{math}
+J(A, B) = \frac { | A \bigcap B |} { |A \bigcup B| }
 ```
 
+
+Create a vector of every sentences of both documents.
+
+
 ```python
+from nifigator.set_math import merge_multiset
+from nifigator import document_vector
+
 # setup dictionary with sentences and their contexts
-doc_1_contexts = {
-    sent.anchorOf: sentence_contexts(sent.anchorOf, phrase_contexts)
-    for sent in doc_1.sentences
+doc1_vector = {
+    sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, phrase_vectors, merge_dict=True)
+    for sent in doc1.sentences
 }
-doc_2_contexts = {
-    sent.anchorOf: sentence_contexts(sent.anchorOf, phrase_contexts)
-    for sent in doc_2.sentences
+doc2_vector = {
+    sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, phrase_vectors, merge_dict=True)
+    for sent in doc2.sentences
 }
 ```
 
+Calculate the distances (based on Jaccard index) of all sentence combinations of first and second document.
+
+
 ```python
+from nifigator.set_math import jaccard_index, merge_multiset
+
 # Calculate the Jaccard distance for all sentence combinations
 d = {
     (s1, s2): 1 - jaccard_index(c1, c2)
-    for s1, c1 in doc_1_contexts.items()
-    for s2, c2 in doc_2_contexts.items()
+    for s1, c1 in doc1_vector.items()
+    for s2, c2 in doc2_vector.items()
 }
 # Sort the results with lowest distance
 similarities = sorted(d.items(), key=lambda item: item[1])
 ```
 
+Print the results
+
+
 ```python
 # print the results
-for item in similarities[0:5]:
-    print(repr(item[0][0]) + " \n<- distance = "+str(item[1])+" = "+str(float(item[1]))+" ->\n"+repr(item[0][1])+"\n")
+for item in similarities[0:6]:
+    print(repr(item[0][0]) + " \n<- distance = "+str(item[1])+' = {0:.4f}'.format(float(item[1]))+" ->\n"+repr(item[0][1])+"\n")
 ```
 
 
 ```console
 'External links' 
-<- distance = 0 = 0.0 ->
+<- distance = 0 = 0.0000 ->
 'External links'
 
 'It is a variable star listed in the General Catalogue of Variable Stars, but it is listed using its Bayer designation and does not have a separate variable star designation.' 
-<- distance = 106/409 = 0.2591687041564792 ->
+<- distance = 103/432 = 0.2384 ->
 'Antares is a variable star and is listed in the General Catalogue of Variable Stars but as a Bayer-designated star it does not have a separate variable star designation.'
 
 'In 2016, the International Astronomical Union Working Group on Star Names (WGSN) approved the proper name Aldebaran for this star.' 
-<- distance = 19/54 = 0.35185185185185186 ->
+<- distance = 131/380 = 0.3447 ->
 'In 2016, the International Astronomical Union organised a Working Group on Star Names (WGSN) to catalog and standardise proper names for stars.'
 
-'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.' 
-<- distance = 117/200 = 0.585 ->
-"Nomenclature\nα Scorpii (Latinised to Alpha Scorpii) is the star's Bayer designation."
-
 'Aldebaran is 5.47 degrees south of the ecliptic and so can be occulted by the Moon.' 
-<- distance = 41/69 = 0.5942028985507246 ->
+<- distance = 34/59 = 0.5763 ->
 'Occultations and conjunctions\nAntares is 4.57 degrees south of the ecliptic, one of four first magnitude stars within 6° of the ecliptic (the others are Spica, Regulus and Aldebaran), so it can be occulted by the Moon.'
+
+'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.' 
+<- distance = 7/12 = 0.5833 ->
+"Nomenclature\nα Scorpii (Latinised to Alpha Scorpii) is the star's Bayer designation."
 ```
 
 
@@ -235,245 +194,434 @@ for item in similarities[0:5]:
 
 Now some text search examples.
 
-For text search we need another distance function. Now we are interested in the extent to which a sentence contains the contexts of a text. For this we use the support, defined by the cardinality of the intersection between A and B divided by the cardinality of A. 
+For text search we need another distance function. Now we are interested in the extent to which a sentence contains the contexts of a text. For this we use the containment or support, defined by the cardinality of the intersection between A and B divided by the cardinality of A. 
 
-$support = $ $| A \bigcap B | \over |A| $
- 
+```{math}
+containment(A, B) = \frac { | A \bigcap B |} { |A| }
+```
+
 The sentence with the highest support has the most contexts in common and thus is the closest to the text.
 
 ```python
-def support_index(
-    c1: set=None, 
-    c2: set=None
-):
-    """
-    Function to calculate the support of set B in set A
-    """
-    denom = len(c1)
-    if denom != 0:
-        return Fraction(len(c1 & c2), denom)
-    else:
-        return 0
+lemma_vectors = g.load_vectors( 
+    documents={'doc1': doc1.isString, 'doc2': doc2.isString},
+    includeOtherForms=True,
+)
+```
+```python
+phrase_vectors['is'] <= lemma_vectors['is']
 ```
 
 ```python
-def extract_contexts(doc: str=None, d: dict=None):
-    """
-    extract the phrases of a string and create dict of phrases with their contexts
-    """
-    params = {"words_filter": {'data': {phrase: True for phrase in STOPWORDS}}}
-
-    r = generate_phrase_context(
-        document=doc, 
-        params=params
-    )
-
-    c = dict()
-    for phrase, context, _ in r:
-        c[phrase] = d.get(phrase, Counter())
-#         c[context] = d.get(context, Counter())
-            
-    return c
+lemma_vectors['larger'] <= lemma_vectors['large']
 ```
 
 ```python
-def combine(d: dict=None):
-    """
-    Function to calculate the multiset from a dict of phrases
-    """
-    x = Counter()
-    for item in d.values():
-        x += item
-    return x
+c = [c[0] for c in (lemma_vectors['star'] - (phrase_vectors['stars'])).most_common(15)]
 ```
 
 ```python
-def search(text: str=None, contexts: dict=None, phrase_contexts: dict=None):
+g.most_similar(contexts=c)
+```
+
+```python
+phrase_vectors['is']
+```
+
+```python
+# containment_index(lemma_vectors['is'], phrase_vectors['is'])
+```
+
+```python
+# setup dictionary with sentences and their contexts
+doc_vectors = {
+    sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, phrase_vectors)
+    for sent in doc1.sentences+doc2.sentences
+}
+```
+
+```python
+from nifigator import containment_index
+from collections import Counter
+
+def search(query: str=None, 
+           doc_vectors: dict=None, 
+           lemma_vectors: dict={}
+    ):
     """
     """
     # make sure that all phrases in the text have contexts available
-    phrase_contexts = load_vectors([text], phrase_contexts)
-
+    lemma_vectors = g.load_vectors(
+        documents={'query': query},
+        vectors=lemma_vectors,
+        includeOtherForms=True
+    )
     # generate contexts of the text
-    phrases_1 = extract_contexts(text, phrase_contexts)
+    phrases_1 = document_vector({'query': query}, lemma_vectors)
     d = {}
-    for sent, phrases_2 in contexts.items():
+    for sent, phrases_2 in doc_vectors.items():
 
         # find the full phrase matches of the text and the sentence
         full_matches = [
             (p1, p2)
             for p1, c1 in phrases_1.items()
             for p2, c2 in phrases_2.items()
-            if 1 - jaccard_index(c1, c2) == 0
+            if c2 <= c1 and c2 != Counter()
         ]
         # find the close phrase matches of the text and the sentence
         close_matches = {
-                    (p1, p2): 1 - jaccard_index(c1, c2)
-                    for p1, c1 in phrases_1.items()
+                    p1: [(p2, 1 - containment_index(c2, c1))
                     for p2, c2 in phrases_2.items()
-                    if 1 - support_index(c1, c2) < 1 and 
+                    if 1 - containment_index(c2, c1) < 1 and 
                        p1 not in [p[0] for p in full_matches] and 
-                       p2 not in [p[1] for p in full_matches]
+                       p2 not in [p[1] for p in full_matches]]
+                    for p1, c1 in phrases_1.items()
         }
+        close_matches = {key: sorted(value, key=lambda item: item[1]) for key, value in close_matches.items() if value!=[]}
         close_matches = dict(sorted(close_matches.items(), key=lambda item: item[1]))
         
-        # calculate the support
-        c1 = combine(phrases_1)
-        c2 = combine(phrases_2)
-        supp = support_index(c1, c2)
-        d[sent] = (1 - supp, (full_matches, close_matches))
+        # calculate the containment index
+        c1 = merge_multiset(phrases_1)
+        c2 = merge_multiset(phrases_2)
+        containment = containment_index(c1, c2)
+        d[sent] = (1 - containment, (full_matches, close_matches))
             
     d = dict(sorted(d.items(), key=lambda item: item[1][0]))
     return d
 ```
 
-```python
-# setup dictionary with sentences and their contexts
-doc_contexts = {
-    sent.anchorOf: extract_contexts(sent.anchorOf, phrase_contexts)
-    for sent in doc_1.sentences+doc_2.sentences
-}
-```
+
+Create a vector of every sentence in all documents.
+
+
 
 ```python
-text = "The brightest star in the constellation of Taurus"
-d = search(text, doc_contexts, phrase_contexts)
+query = "The brightest star in the constellation of Taurus"
+d = search(
+    query=query,
+    doc_vectors=doc_vectors,
+    lemma_vectors=lemma_vectors,
+)
 for i in list(d.items())[0:3]:
     print(repr(i[0]))
-    print("  distance = " +str(i[1][0]) + " = "+str(float(i[1][0])))
+    print("distance = " +str(i[1][0]) + " = "+str(float(i[1][0])))
+    print("exact similarities:")
     for j in i[1][1][0]:
-        print("  " + str(j))
-    for j in i[1][1][1]:
-        print("  " +str(j))        
+        print("  " +str(j)+' = 0')
+    print("other similarities:")
+    for j in i[1][1][1:]:
+        for key, value in j.items():
+            for row in value:
+                print(key+": "+str(row))
+    print("")
 ```
 
 ```console
 'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.'
-  distance = 0 = 0.0
-  ('brightest', 'brightest')
-  ('brightest+star', 'brightest+star')
-  ('star', 'star')
-  ('constellation', 'constellation')
-  ('Taurus', 'Taurus')
+distance = 0 = 0.0
+exact similarities:
+  ('brightest', 'brightest') = 0
+  ('brightest+star', 'brightest+star') = 0
+  ('star', 'star') = 0
+  ('constellation', 'constellation') = 0
+  ('Taurus', 'Taurus') = 0
+other similarities:
+
 "It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous."
-  distance = 1/7 = 0.14285714285714285
-  ('brightest', 'brightest')
-  ('brightest+star', 'brightest+star')
-  ('star', 'star')
-  ('Taurus', 'Taurus')
-  ('constellation', 'sky')
-  ('constellation', 'night+sky')
-  ('constellation', 'night')
-  ('constellation', 'planet')
-  ('constellation', 'sun')
-  ('constellation', 'surface')
-  ('constellation', 'temperature')
-  ('constellation', 'brightness')
-  ('constellation', 'magnitude')
-  ('constellation', 'host')
-  ('constellation', 'times')
-  ('constellation', 'mass')
-  ('constellation', 'radius')
+distance = 1/6 = 0.16666666666666666
+exact similarities:
+  ('brightest', 'brightest') = 0
+  ('brightest+star', 'brightest+star') = 0
+  ('star', 'star') = 0
+  ('Taurus', 'Taurus') = 0
+other similarities:
+  ('constellation', 'night') = 0.9286
+  ('constellation', 'night+sky') = 0.9286
+  ('constellation', 'sky') = 0.9286
+  ('constellation', 'surface') = 0.9286
+  ('constellation', 'radius') = 0.9286
+  ('constellation', 'brightness') = 0.9655
+  ('constellation', 'magnitude') = 0.9655
+  ('constellation', 'host') = 0.9655
+  ('constellation', 'planet') = 0.9655
+  ('constellation', 'mass') = 0.9655
+  ('constellation', 'sun') = 0.9655
+  ('constellation', 'temperature') = 0.9655
+
 'As the brightest star in a Zodiac constellation, it is also given great significance within astrology.'
-  distance = 6/35 = 0.17142857142857143
-  ('brightest', 'brightest')
-  ('brightest+star', 'brightest+star')
-  ('star', 'star')
-  ('constellation', 'constellation')
+distance = 13/72 = 0.18055555555555555
+exact similarities:
+  ('brightest', 'brightest') = 0
+  ('brightest+star', 'brightest+star') = 0
+  ('star', 'star') = 0
+  ('constellation', 'constellation') = 0
+other similarities:
+  ('Taurus', 'astrology') = 0.9643
 ```
 
 ```python
 # reformulation with cluster instead of constellation and Sun instead of brightest star
-text = "the sun in the Taurus cluster"
-d = search(text, doc_contexts, phrase_contexts)
-for i in list(d.items())[0:3]:
+query = "the sun in the Taurus cluster"
+d = search(
+    query=query,
+    doc_vectors=doc_vectors,
+    lemma_vectors=lemma_vectors,
+)
+for i in list(d.items())[0:4]:
     print(repr(i[0]))
     print("distance = " +str(i[1][0]) + " = "+str(float(i[1][0])))
+    print("exact similarities:")
     for j in i[1][1][0]:
-        print("  " + str(j))
-    for j in i[1][1][1]:
-        print("  " +str(j))    
+        print("  " +str(j)+' = 0')
+    print("other similarities:")
+    for j in i[1][1][1:]:
+        for key, value in j.items():
+            for row in value:
+                print(key+": "+str(row))
+    print("")
 ```
 ```console
 "It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous."
-  distance = 3/10 = 0.3
-  ('sun', 'sun')
-  ('Taurus', 'Taurus')
-  ('cluster', 'star')
-  ('cluster', 'night+sky')
-  ('cluster', 'sky')
-  ('cluster', 'planet')
-  ('cluster', 'red+giant')
-  ('cluster', 'surface+temperature')
-  ('cluster', 'night')
-  ('cluster', 'magnitude')
-  ('cluster', 'host')
-  ('cluster', 'mass')
-  ('cluster', 'surface')
-  ('cluster', 'temperature')
-  ('cluster', 'radius')
+distance = 11/42 = 0.2619
+exact similarities:
+  ('sun', 'sun') = 0
+  ('Taurus', 'Taurus') = 0
+other similarities:
+  ('cluster', 'star') = 0.9286
+  ('cluster', 'sky') = 0.9286
+  ('cluster', 'planet') = 0.9286
+  ('cluster', 'radius') = 0.9286
+  ('cluster', 'red+giant') = 0.9524
+  ('cluster', 'surface+temperature') = 0.9615
+  ('cluster', 'night') = 0.9655
+  ('cluster', 'night+sky') = 0.9655
+  ('cluster', 'magnitude') = 0.9655
+  ('cluster', 'host') = 0.9655
+  ('cluster', 'mass') = 0.9655
+  ('cluster', 'surface') = 0.9655
+  ('cluster', 'temperature') = 0.9655
+  ('cluster', 'luminous') = 0.9655
+
 'Aldebaran , designated α Tauri (Latinized to Alpha Tauri, abbreviated Alpha Tau, α Tau), is an orange giant star measured to be about 65 light-years from the Sun in the zodiac constellation Taurus.'
-  distance = 1/2 = 0.5
-  ('Taurus', 'Taurus')
-  ('sun', 'Sun')
-  ('sun', 'zodiac')
-  ('cluster', 'zodiac')
-  ('sun', 'constellation')
-  ('cluster', 'star')
-  ('cluster', 'Sun')
-  ('sun', 'star')
-  ('sun', 'years')
-  ('cluster', 'years')
-  ('cluster', 'constellation')
+distance = 10/21 = 0.4762
+exact similarities:
+  ('Taurus', 'Taurus') = 0
+other similarities:
+  ('sun', 'Sun') = 0.6957
+  ('sun', 'zodiac') = 0.8095
+  ('cluster', 'zodiac') = 0.9130
+  ('cluster', 'star') = 0.9286
+  ('cluster', 'Sun') = 0.9286
+  ('sun', 'star') = 0.9655
+  ('sun', 'light') = 0.9655
+  ('sun', 'years') = 0.9655
+  ('sun', 'constellation') = 0.9655
+  ('cluster', 'years') = 0.9655
+  ('cluster', 'constellation') = 0.9655
+
 "The star is, by chance, in the line of sight between the Earth and the Hyades, so it has the appearance of being the brightest member of the open cluster, but the cluster that forms the bull's-head-shaped asterism is more than twice as far away, at about 150 light years."
-  distance = 21/40 = 0.525
-  ('cluster', 'cluster')
-  ('sun', 'Earth')
-  ('sun', 'line')
-  ('sun', 'head')
-  ('Taurus', 'light')
-  ('sun', 'star')
-  ('sun', 'chance')
-  ('sun', 'bull')
-  ('sun', 'years')
+distance = 23/42 = 0.5476
+exact similarities:
+  ('cluster', 'cluster') = 0
+other similarities:
+  ('sun', 'Earth') = 0.8462
+  ('sun', 'line') = 0.8889
+  ('sun', 'head') = 0.9286
+  ('Taurus', 'light') = 0.9643
+  ('sun', 'star') = 0.9655
+  ('sun', 'chance') = 0.9655
+  ('sun', 'bull') = 0.9655
+  ('sun', 'light') = 0.9655
+  ('sun', 'years') = 0.9655
 ```
 
 ```python
-text = "What did astronomer William Herschel discover to Aldebaran?"
-d = search(text, doc_contexts, phrase_contexts)
-for i in list(d.items())[0:3]:
+query = "What did astronomer Herschel discover to Aldebaran?"
+d = search(
+    query=query,
+    doc_vectors=doc_vectors,
+    lemma_vectors=lemma_vectors,
+)
+for i in list(d.items())[0:4]:
     print(repr(i[0]))
     print("distance = " +str(i[1][0]) + " = "+str(float(i[1][0])))
+    print("exact similarities:")
     for j in i[1][1][0]:
-        print("  " + str(j))
-    for j in i[1][1][1]:
-        print("  " +str(j))    
+        print("  " +str(j)+' = 0')
+    print("other similarities:")
+    for j in i[1][1][1:]:
+        for key, value in j.items():
+            for row in value:
+                print(key+": "+str(row))
+    print("")
 ```
 
 ```console
 'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.'
-  distance = 47/97 = 0.4845360824742268
-  ('astronomer', 'astronomer')
-  ('William', 'William')
-  ('Herschel', 'Herschel')
-  ('Aldebaran', 'Aldebaran')
-  ('What', 'English')
-'It was then observed by Scottish astronomer James William Grant FRSE while in India on 23 July 1844.'
-  distance = 59/97 = 0.6082474226804123
-  ('astronomer', 'astronomer')
-  ('William', 'William')
-  ('What', 'It')
-  ('What', 'It+was')
-  ('did', 'was')
-  ('Aldebaran', 'It')
-  ('Aldebaran', 'India')
+distance = 229/297 = 0.7710
+exact similarities:
+  ('astronomer', 'astronomer') = 0
+  ('William', 'William') = 0
+  ('Herschel', 'Herschel') = 0
+  ('Aldebaran', 'Aldebaran') = 0
+other similarities:
+  ('discover', 'discovered') = 0.8214
+  ('did', 'discovered') = 0.9863
+
 'Working at his private observatory in Tulse Hill, England, in 1864 William Huggins performed the first studies of the spectrum of Aldebaran, where he was able to identify the lines of nine elements, including iron, sodium, calcium, and magnesium.'
-  distance = 61/97 = 0.6288659793814433
-  ('William', 'William')
-  ('Aldebaran', 'Aldebaran')
-  ('discover', 'identify')
-  ('did', 'he+was')
-  ('did', 'was')
+distance = 9/11 = 0.8182
+exact similarities:
+  ('William', 'William') = 0
+  ('Aldebaran', 'Aldebaran') = 0
+other similarities:
+  ('did', 'performed') = 0.9504
+  ('discover', 'performed') = 0.9579
+  ('discover', 'identify') = 0.9688
+  ('What', 'where+he') = 0.9773
+  ('What', 'iron') = 0.9773
+  ('What', 'calcium') = 0.9773
+  ('did', 'identify') = 0.9793
+  ('did', 'he+was') = 0.9863
+  ('did', 'able') = 0.9863
+  ('discover', 'Working') = 0.9898
+  ('discover', 'where') = 0.9898
+  ('discover', 'he+was') = 0.9898
+  ('discover', 'lines') = 0.9898
+  ('discover', 'including') = 0.9898
+  ('did', 'England') = 0.9932
+  ('did', 'was') = 0.9932
+
+'It was then observed by Scottish astronomer James William Grant FRSE while in India on 23 July 1844.'
+distance = 245/297 = 0.8249
+exact similarities:
+  ('astronomer', 'astronomer') = 0
+  ('William', 'William') = 0
+other similarities:
+  ('What', 'It') = 0.9024
+  ('discover', 'observed') = 0.9468
+  ('What', 'It+was') = 0.9535
+  ('What+did', 'It+was') = 0.9545
+  ('did', 'observed') = 0.9577
+  ('Aldebaran', 'It') = 0.9655
+  ('Aldebaran', 'India') = 0.9655
+  ('discover', 'It+was') = 0.9794
+  ('did', 'It+was') = 0.9863
+  ('discover', 'was+then') = 0.9898
+  ('discover', 'then') = 0.9898
+  ('did', 'was') = 0.9932
+  ('did', 'India') = 0.9932
+```
+
+
+### Applying the minHash algorithm with LSH (Locality Sensitive Hashing)
+
+```python
+from datasketch import MinHashLSHEnsemble, MinHash
+
+num_perm = 2**8
+
+def create_phrases_minhash_dict(
+    d: dict=None,
+    minhash_dict: dict={}
+):
+    for key, value in d.items():
+        if key not in minhash_dict.keys():
+            minhash_dict[key] = MinHash(
+                num_perm=num_perm
+            )
+            for context in value.keys():
+                v = str(context).encode('utf8')
+                minhash_dict[key].update(v)
+    return minhash_dict
+
+def create_document_minhash_dict(
+    d: dict=None, 
+    phrases_minhash: dict=None,
+):
+    minhash_dict = dict()
+    for key, value in d.items():
+        minhash_dict[key] = MinHash(
+            num_perm=num_perm
+        )
+        for phrase in value.keys():
+            minhash_dict[key].merge(phrases_minhash[phrase])
+    return minhash_dict
+
+minhash_phrases = create_phrases_minhash_dict(phrase_vectors, {})
+minhash_lemmas = create_phrases_minhash_dict(lemma_vectors, {})
+minhash_docs = create_document_minhash_dict(doc_vector, minhash_phrases)
+```
+
+```python
+s1 = 'Antares is a variable star and is listed in the General Catalogue of Variable Stars but as a Bayer-designated star it does not have a separate variable star designation.'
+s2 = 'It is a variable star listed in the General Catalogue of Variable Stars, but it is listed using its Bayer designation and does not have a separate variable star designation.'
+print(1 - minhash_docs[s2].jaccard(minhash_docs[s1]))
+```
+
+```python
+# calculate the real Jaccard index
+1 - float(jaccard_index(
+    merge_multiset(doc_vector[s1]).keys(),
+    merge_multiset(doc_vector[s2]).keys()
+))
+```
+
+```python
+num_part = 2**4
+
+# Create an LSH Ensemble index with threshold and number of partition
+lshensemble = MinHashLSHEnsemble(
+    threshold=0.5, 
+    num_perm=num_perm,
+    num_part=num_part
+)
+lshensemble.index(
+    [
+        (key, minhash_docs[key], len(value.keys()))
+        for key, value in doc_vector.items()
+    ]
+)
+```
+
+```python
+text = "What did astronomer William Herschel discover in relation to Aldebaran?"
+
+# make sure that all phrases in the text have contexts available
+lemma_vectors = g.load_vectors(
+    documents=[text], 
+    vectors=lemma_vectors,
+    includeOtherForms=True
+)
+
+# generate contexts of the text
+phrases_1 = extract_contexts(text, lemma_vectors)
+
+minhash_lemmas = create_phrases_minhash_dict(phrases_1, minhash_lemmas)
+
+minhash_text = MinHash(
+        num_perm=num_perm
+)
+for phrase in phrases_1.keys():
+    minhash_text.merge(minhash_lemmas[phrase])
+
+d = dict()
+for sent in lshensemble.query(minhash_text, len(phrases_1.keys())):
+    c1 = merge_multiset(phrases_1).keys()
+    c2 = merge_multiset(doc_vector[sent]).keys()
+    containment = containment_index(c1, c2)
+    d[sent] = 1 - containment
+d = dict(sorted(d.items(), key=lambda item: item[1]))
+
+for item, distance in list(d.items())[0:50]:
+    print(repr(item) +': {0:.4f}'.format(float(distance)))
+```
+
+```python
+
+```
+
+```python
+
 ```
 
 ```python
