@@ -15,7 +15,8 @@ Contents
    02_adding_document_data
    03_adding_annotations
    04_using a SPARQL endpoint
-   05_using a NifVector graph
+   05_using a NifVector graph - English
+   05_using a NifVector graph - Dutch
    06_creating a nifvec graph
    07_Sentence similarities
    08_SPARQL queries for NifVector

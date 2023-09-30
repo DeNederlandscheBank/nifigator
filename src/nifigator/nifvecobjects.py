@@ -33,6 +33,7 @@ from .const import (
     PHRASE_SEPARATOR,
     WORDS_FILTER,
     FORCED_SENTENCE_SPLIT_CHARACTERS,
+    REGEX_FILTER,
 )
 from .utils import tokenizer, tokenize_text, to_iri
 from .nifgraph import NifGraph
@@ -45,6 +46,7 @@ default_max_context_length = 5
 default_max_phrase_length = 5
 default_context_separator = "_"
 default_phrase_separator = "+"
+default_regex_filter = None  # "^[0-9]*[a-zA-Z]*$"
 
 
 class NifVectorGraph(NifGraph):
@@ -117,7 +119,7 @@ class NifVectorGraph(NifGraph):
                 if context_uris is None or context.uri in context_uris:
                     isString = context.isString
                     if isString is not None:
-                        documents[context.uri] = preprocess(isString)
+                        documents[context.uri] = preprocess(isString, self.params)
                     else:
                         logging.warning("No isString found for " + str(context.uri))
 
@@ -636,7 +638,9 @@ class NifVectorGraph(NifGraph):
             MIN_PHRASE_COUNT: 1,
         }
 
-        documents = {key: preprocess(value) for key, value in documents.items()}
+        documents = {
+            key: preprocess(value, self.params) for key, value in documents.items()
+        }
 
         phrases = generate_document_phrases(documents=documents, params=params)
         for phrase in phrases.keys():
@@ -656,7 +660,11 @@ class NifVectorGraph(NifGraph):
 
 
 def document_vector(
-    documents: dict = None, vectors: dict = None, merge_dict: bool = False
+    documents: dict = None,
+    vectors: dict = None,
+    merge_dict: bool = False,
+    topn: int = 15,
+    params: dict = None,
 ):
     """
     extract the phrases of a string and create dict of phrases with their contexts
@@ -665,13 +673,15 @@ def document_vector(
         WORDS_FILTER: {"data": {phrase: True for phrase in STOPWORDS}},
         MIN_PHRASE_COUNT: 1,
     }
-    documents = {key: preprocess(value) for key, value in documents.items()}
+    phrase_sep = params.get(PHRASE_SEPARATOR, default_phrase_separator)
+    documents = {key: preprocess(value, params) for key, value in documents.items()}
     phrases = generate_document_phrases(documents=documents, params=params)
     c = dict()
     for phrase in phrases.keys():
-        if phrase not in vectors.keys():
-            logging.warning("Phrase " + phrase + " not found in vectors.")
-        c[phrase] = vectors.get(phrase, Counter())
+        p = phrase.replace(phrase_sep, " ")
+        if p not in vectors.keys():
+            logging.debug("Phrase " + repr(p) + " not found in vectors.")
+        c[p] = Counter(vectors.get(p, Counter()).most_common(topn))
     #         c[context] = d.get(context, Counter())
 
     if merge_dict:
@@ -726,10 +736,13 @@ def generate_document_contexts(
             and sum(v for v in d_phrase_counter.values()) >= min_context_count
         ):
             final_contexts[d_context] = d_phrase_counter
+        else:
+            if d_context in to_process_contexts.keys():
+                del to_process_contexts[d_context]
+
     del init_contexts
 
-    logging.debug(".... added initial contexts: " + str(len(final_contexts.keys())))
-    logging.debug(".... set of contexts to process: " + str(len(to_process_contexts)))
+    logging.debug(".... added contexts: " + str(len(to_process_contexts)))
 
     while to_process_contexts != dict():
         new_contexts = defaultdict(lambda: defaultdict(lambda: defaultdict(set)))
@@ -804,11 +817,11 @@ def generate_document_contexts(
                 and sum(v for v in d_phrase_counter.values()) >= min_context_count
             ):
                 final_contexts[d_context] = d_phrase_counter
+            else:
+                if d_context in to_process_contexts.keys():
+                    del to_process_contexts[d_context]
 
-        logging.debug(".... added contexts: " + str(len(new_contexts.keys())))
-        logging.debug(
-            ".... set of contexts to process: " + str(len(to_process_contexts))
-        )
+        logging.debug(".... added contexts: " + str(len(to_process_contexts)))
 
     # create final phrases dict from contexts
     phrases = Counter()
@@ -859,7 +872,9 @@ def generate_sentence_phrases(
     sentences: list = None,
     params: dict = {},
 ):
-    """ """
+    """
+    Generator for all phrases and their location in the sentences
+    """
     phrase_sep = params.get(PHRASE_SEPARATOR, default_phrase_separator)
     words_filter = params.get(WORDS_FILTER, None)
     max_phrase_length = params.get(MAX_PHRASE_LENGTH, default_max_phrase_length)
@@ -895,18 +910,22 @@ def preprocess(
 ):
     """ """
     split_characters = params.get(FORCED_SENTENCE_SPLIT_CHARACTERS, [])
+    regex_filter = params.get(REGEX_FILTER, default_regex_filter)
     # tokenize documents into sentences
     sentences = [
         [word["text"] for word in sentence]
         for sentence in tokenize_text(document, split_characters)
     ]
-    # select alfanumeric and numeric tokens and add tokens for start and end of sentence
-    preprocessed = [
-        [
-            word
-            for word in ["SENTSTART"] + sentence + ["SENTEND"]
-            if re.match("^[0-9]*[a-zA-Z]*$", word)
+    if regex_filter is not None:
+        # select tokens given a regex filter and add start and end of sentence tokens SENTSTART and SENTEND
+        preprocessed = [
+            ["SENTSTART"]
+            + [word for word in sentence if re.match(regex_filter, word)]
+            + ["SENTEND"]
+            for sentence in sentences
         ]
-        for sentence in sentences
-    ]
+    else:
+        preprocessed = [
+            ["SENTSTART"] + sentence + ["SENTEND"] for sentence in sentences
+        ]
     return preprocessed

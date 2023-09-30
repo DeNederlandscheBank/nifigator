@@ -49,6 +49,7 @@ PHRASE_SEPARATOR = "phrase_separator"
 WORDS_FILTER = "words_filter"
 TRIPLE_BATCH_SIZE = "triple_batch_size"
 FORCED_SENTENCE_SPLIT_CHARACTERS = "force_sentence_split_characters"
+REGEX_FILTER = "regex_filter"
 
 STOPWORDS = [
     "a",
@@ -88,6 +89,7 @@ STOPWORDS = [
     "over",
     "under",
     "further",
+    "per",
 ]
 
 # Tense

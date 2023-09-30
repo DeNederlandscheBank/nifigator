@@ -12,16 +12,16 @@ jupyter:
     name: python3
 ---
 
-# NifVector graphs
+# Querying a NifVector graph - English
 
 ## Introduction
 
 
-A NifVector graph is a network of phrases and related contexts that occur in a certain document set (in Nif). It can be used as if it were a language model.
+A NifVector graph is a network graph of multiword expressions (phrases) and the contexts in which they occur based on a document set (here in NLP Interchange Format). It can be used as if it were a language model.
 
-From a NifVector graph you can derive vectors of phrases (i.e. a multiword expression) and contexts that contain the number of occurrences in a document set. The main difference of a NifVector graph to traditional word vector embeddings is that no dimensionality reduction is applied; and there is no model created with real-valued vector embeddings. Instead, the NifVectors are derived directly from the document set itself without any transformation.
+The main difference of a NifVector graph to traditional word vector embeddings is that no dimensionality reduction is applied; and there is no model created with real-valued vector embeddings. Instead, the NifVectors are derived directly from the document set itself without any transformation. Furthermore, the graph structure also enables to differentiate words depending on the context in which they occur. Because no dimensionality reduction is applied the NifVector graph produces explainable results without any randomness. It also enables explicit links between the phrases and context vector representation and lexical and linguistical annotations.
 
-The phrase and context vectors can be used for word and sentence similarities and for search engines. They can also be combined to create a vector that is a representation of the phrase together with the context in which it occurs.
+This notebook shows how to query the NifVector graph and extract phrase and context similarities.
 
 ```python
 import os, sys, logging
@@ -38,13 +38,11 @@ Let's setup a NifVector graph with a context with two sentences.
 # The NifContext contains a context which uses a URI scheme
 from nifigator import NifGraph, NifContext, OffsetBasedString, NifContextCollection
 
-isString = "We went to the small park to walk.\n Yesterday, we went to the city to shop."
-
 # Make a context by passing uri, uri scheme and string
 context = NifContext(
   uri="https://mangosaurus.eu/rdf-data/doc_1",
   URIScheme=OffsetBasedString,
-  isString=isString
+  isString="We went to the small park to walk.\n Yesterday, we went to the city to shop."
 )
 context.extract_sentences()
 
@@ -68,18 +66,14 @@ params = {
     "max_context_length": 3,
 }
 
-# the NifVector graph can be created from a NifGraph and a set of optional parameters
+# the NifVector graph can be created from the NifGraph made above
 g = NifVectorGraph(
     nif_graph=nif_graph, 
     params=params
 )
 ```
 
-```python
-# g.serialize(destination="test.ttl", format="ttl")
-```
-
-The contexts of the work 'park' are found in this way.
+The contexts of the work 'small park' are found in this way.
 
 ```python
 phrase = "small park"
@@ -98,7 +92,7 @@ Counter({('to the', 'to'): 1,
 
 So the context ('to the', 'to') with the phrase 'small park' occurs once in the text.
 
-You see that, contrary to Word2Vec models a NifVector graph also derives contexts of phrases (i.e. multiword expressions).
+You see that, contrary to Word2Vec models a NifVector graph also derives contexts of phrases.
 
 The phrases that occurs within this context can be found in the following way:
 
@@ -106,7 +100,7 @@ The phrases that occurs within this context can be found in the following way:
 g.context_phrases(('to the', 'to'))
 ```
 
-Now we can find the most similar words of the word 'park'.
+Now we can find the most similar words of the word 'city'.
 
 ```python
 phrase = "city"
@@ -143,23 +137,30 @@ The most similar phrases are derived from the contexts in which the words occur.
 These are results of a NifVector graph created with 10.000 DBpedia pages. We defined a context of a word in it simplest form: the tuple of the previous multiwords and the next multiwords (no preprocessing, no changes to the text, i.e. no deletion of stopwords and punctuation). The maximum phrase length is five words, the maximum left and right context length is also five words.
 
 ```python
+from rdflib import URIRef
+
+database_url = 'http://localhost:3030/dbpedia_en'
+identifier = URIRef("https://mangosaurus.eu/dbpedia")
+```
+
+```python
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
-from nifigator import NifVectorGraph, URIRef
+from nifigator import NifVectorGraph
 
 # Connect to triplestore
-store = SPARQLUpdateStore()
-query_endpoint = 'http://localhost:3030/dbpedia_en/sparql'
-update_endpoint = 'http://localhost:3030/dbpedia_en/update'
-store.open((query_endpoint, update_endpoint))
-
+store = SPARQLUpdateStore(
+    query_endpoint = database_url+'/sparql',
+    update_endpoint = database_url+'/update'
+)
 # Create NifVectorGraph with this store
-g = NifVectorGraph(store=store, 
-                   identifier=URIRef("https://mangosaurus.eu/dbpedia")
+g = NifVectorGraph(
+    store=store, 
+    identifier=identifier
 )
 ```
 
 
-### Most frequent contexts
+### Most frequent contexts of a phrase
 
 
 The eight most frequent contexts in which the word 'has' occurs with their number of occurrences are the following:
@@ -184,15 +185,15 @@ Counter({('It', 'been'): 1031,
          ('it', 'a'): 270})
 ```
 
-This means that the corpus contains 1031 occurrences of 'It has been', i.e. occurrences where the word 'has' occurred in the context ('It', 'been').
+This means that the corpus contains ... occurrences of 'It has been', i.e. occurrences where the word 'has' occurred in the context ('It', 'been').
 
 SENTSTART and SENTEND are tokens to indicate the start and end of a sentence.
 
 
-### Contexts and phrase similarities
+### Phrase and context frequencies
 
 
-The contexts in which a word occurs to some extent represent the properties and the meaning of a word. If you can derived the phrases that share the most frequent contexts of the word 'has' you get the following table (the columns contains the contexts, the rows the phrases that have the most contexts in common):
+The contexts in which a word occurs represent to some extent the properties and the meaning of a word. If you derive the phrases that share the most frequent contexts of the word 'has' then you get the following table (the columns contains the contexts, the rows the phrases that have the most contexts in common):
 
 ```python
 import pandas as pd
@@ -219,14 +220,12 @@ has always        2 	3   	2               2     3       0       2 	0
 ```
 
 
-The number of contexts that a word has in common with contexts of another word can be used as a measure of similarity. So, the word 'had' (second row) has eight contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (seventh row) has seven contexts in common, so 'would have' is also similar but less similar than the word 'had'. We used a limited number of contexts to show the idea; normally a higher number of contexts are used to compare the similarity of words.
+The contexts that a word has in common with contexts of another word can be used as a measure of similarity. The word 'had' (second row) has eight contexts in common with the word 'has' so this word is very similar. The phrase 'would have' (seventh row) has seven contexts in common, so 'would have' is also similar but less similar than the word 'had'. We used a limited number of contexts to show the idea; normally a higher number of contexts can be used to compare the similarity of words.
 
-The similarities found can explained as follows. In this case, you see that similar words are all forms of the verb 'have'. This is because the verb is often used in the construction of perfect tenses, where the verb 'have' is combined with the past participle of another verb, in this case the often occuring 'been'.
-
-Note that the list contains 'has not'.
+The word similarities found can in this case explained as follows. Similar words are forms of the verb 'have'. This is because the verb is often used in the construction of perfect tenses where the verb 'have' is combined with the past participle of another verb, in this case the often occuring 'been'. Note that the list contains 'has not'.
 
 
-### Top phrase similarities
+### Phrase similarities
 
 
 Based on the approach above we can derive top phrase similarities.
@@ -273,33 +272,33 @@ Resulting in:
  'shorter': (10, 15)}
 ```
 
-Like the word 'larger', these are all comparative adjectives. These words are close because they share the most frequent contexts. In general, you can derive (to some extent) the word class (the part of speech tag and the morphological features) from the contexts in which a word occurs. For example, if the previous word is 'the' and the next word is 'of' then the word between these words will probably be a noun. The word between 'have' and 'been' is almost always an adverb, the word between 'the' and 'book' is almost always an adjective. Likewise, there are contexts that indicate the grammatical number, the verb tense, and so on.
-
-Some contexts are close to each other in the sense that the same words occur in the same contexts, for example, the tuples (much, than) and (is, than) are close because both contexts allow the same words, in this case comparative adjectives. The contexts can therefore be combined and reduced in number. That is what happens when embeddings are calculated with the Word2Vec model. Similar contexts are summarized into one or a limited number of contexts. So it is no surprise that in a well-trained word2vec model adverbs are located near other adverbs, nouns near other nouns, etc. [It might be worthwhile to apply a bi-clustering algorithm here (clustering both rows and columns).]
+Like the word 'larger' these are all comparative adjectives. These words are similar because they share the most frequent contexts, in this case contexts like (is, than) and (much, than).
 
 ```python
-# top phrase similarities of the word "given"
-g.most_similar("given", topn=10, topcontexts=15)
+# top phrase similarities of the word "might"
+g.most_similar("might", topn=10, topcontexts=25)
 ```
 
 ```console
-{'given': (15, 15),
- 'awarded': (12, 15),
- 'called': (12, 15),
- 'made': (12, 15),
- 'assigned': (11, 15),
- 'considered': (11, 15),
- 'granted': (11, 15),
- 'offered': (11, 15),
- 'released': (11, 15),
- 'used': (11, 15)}
+{'could': (25, 25),
+ 'may': (25, 25),
+ 'might': (25, 25),
+ 'should': (25, 25),
+ 'would': (25, 25),
+ 'must': (24, 25),
+ 'would not': (23, 25),
+ 'could not': (22, 25),
+ 'will': (21, 25),
+ 'can': (20, 25)}
 ```
+
+Most frequent coinciding contexts are in this case ('it', 'be'), ('he', 'have') and ('that', 'be').
 
 Contexts can also be used to find 'semantic' similarities.
 
 ```python
 # top phrase similarities of the word "King"
-g.most_similar("King", topn=10, topcontexts=15)
+g.most_similar("king", topn=10, topcontexts=25)
 ```
 
 This results in
@@ -330,7 +329,6 @@ g.most_similar("Barack Obama", topn=10, topcontexts=15)
 {'Barack Obama': (15, 15),
  'Bill Clinton': (5, 15),
  'Ronald Reagan': (5, 15),
-
  'Franklin D Roosevelt': (4, 15),
  'George W Bush': (4, 15),
  'Richard Nixon': (4, 15),
@@ -341,16 +339,12 @@ g.most_similar("Barack Obama", topn=10, topcontexts=15)
 
 
 
-As you can see, similarity relates to syntactical similarity as well as semantic similarity without a distinction being made. Word and their exact opposite are close to each other because they can occur in the same context, i.e. with the context vector you cannot distinguish the difference between the words larger and smaller. This is because we only use the form of text, and not its meaning.
+### Most frequent phrases of a context
 
 
-### Simple 'masks'
-
-
-Here are some examples of 'masks'.
+Here are some examples of the most frequent phrases of a context.
 
 ```python
-# simple 'masks'
 context = ("King", "of England")
 for r in g.context_phrases(context, topn=10).items():
     print(r)
@@ -370,7 +364,6 @@ for r in g.context_phrases(context, topn=10).items():
 ```
 
 ```python
-# simple 'masks'
 context = ("the", "city")
 for r in g.context_phrases(context, topn=10).items():
     print(r)
@@ -389,46 +382,11 @@ for r in g.context_phrases(context, topn=10).items():
 ('port', 31)
 ```
 
-
-### Context sets
-
-
-We calculate with sets of contexts instead of real-valued vectors.
-
-For example, different adverbs for the words man and woman (results are highly depended on documents used).
-
 ```python
-context = ("the", "woman")
-c1 = g.context_phrases(context, topn=None)
-context = ("the", "man")
-c2 = g.context_phrases(context, topn=None)
+context = ("he", "that")
+for r in g.context_phrases(context, topn=10).items():
+    print(r)
 ```
-
-Result of set substraction W \ M (adverbs that are used between 'the' and 'woman' but not between 'the' and 'man':
-
-```python
-(c1 - c2).most_common(5)
-```
-
-```console
-[('first', 133),
- ('sinful', 12),
- ('number of children born per', 7),
- ('pregnant', 6),
- ('high of children born per', 5)]
-```
-
-Result of set substraction M \ W (adverbs that are used between 'the' and 'man' but not between 'the' and 'woman':
-
-```python
-(c2 - c1).most_common(5)
-```
-This results in:
-
-```console
-[('common', 23), ('last', 21), ('white', 18), ('young', 15), ('great', 13)]
-```
-
 
 ### Phrase similarities given a specific context
 
@@ -482,7 +440,7 @@ The result is:
 So these are all verbs, similar to the verb 'deal'.
 
 ```python
-g.most_similar(phrase="deal", context=("a", "with"), topcontexts=50, topphrases=15, topn=10)
+g.most_similar(phrase="deal", context=("a", "with"), topcontexts=100, topphrases=15, topn=10)
 ```
 
 In this case the result is:
@@ -503,7 +461,7 @@ In this case the result is:
 So, now the results are nouns, and similar to the noun 'deal'.
 
 
-### Most similar phrases given a set of contexts
+### Phrase similarities given a set of contexts
 
 If you want to find the phrases that fit a set of contexts then this is also possible.
 
@@ -514,7 +472,6 @@ c1 = [
             g.phrase_contexts("believed", topn=None)
          ).most_common(15)
 ]
-c1
 ```
 
 This results in:
@@ -554,6 +511,10 @@ Resulting in:
  'assumed': (12, 15),
  'claimed': (12, 15),
  'held': (12, 15)}
+```
+
+```python
+
 ```
 
 ```python

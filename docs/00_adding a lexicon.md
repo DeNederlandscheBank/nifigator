@@ -64,16 +64,12 @@ stanza = nlp(text)
 ```
 
 ```python
-print(repr(text[0:100]))
-```
-
-```python
 len(stanza.sentences)
 ```
 
 ```python
 from nifigator import DEFAULT_URI, Lexicon, to_iri, LexicalEntry, Form, Literal, XSD
-from nifigator import ComponentList, Component
+from nifigator import ComponentList, Component, mapobject
 
 import nifigator
 
@@ -130,6 +126,19 @@ for sentence in stanza.sentences:
         if pos is not None and len(pos) == 1:
             lexicalEntry.set_partOfSpeechs(pos)
 
+        phrase_feats = []
+        for word in sentence.words:
+            word_feats = [] 
+            if word.feats is not None:
+                for i in word.feats.split("|"):
+                    p = i.split("=")[0]
+                    o = i.split("=")[1]
+                    olia = mapobject(p, o)
+                    if olia is not None:
+                        word_feats.append(URIRef(olia))
+            phrase_feats.append(word_feats)
+        if phrase_feats is not None and len(phrase_feats) == 1:
+            lexicalEntry.set_MorphPatterns(phrase_feats[0])
         lexica[lang].add_entry(lexicalEntry)    
         components = lemma.split(" ")
         if len(components) > 1:
@@ -140,15 +149,18 @@ for sentence in stanza.sentences:
             for idx, component in enumerate(components):
                 component_lexicalEntry = LexicalEntry(
                     uri=URIRef(to_iri(str(lexica[lang].uri)+component)),
+                    language=lexica[lang].language,
                     partOfSpeechs=[pos[idx]] if len(pos) > 1 else None,
+                    patterns=phrase_feats[idx] if len(phrase_feats) > 1 else None
                 )
                 component_lexicalEntry.set_canonicalForm(
                     Form(
-                        uri=uri,
+                        uri=URIRef(to_iri(str(lexica[lang].uri)+component)),
                         formVariant="canonicalForm",
                         writtenReps=[component],
                     )
                 )
+                lexica[lang].add_entry(component_lexicalEntry)    
                 lemon_component = Component(
                     uri=lexicalEntry.uri
                     + "#component"
@@ -187,13 +199,13 @@ for entry in lemon_entries:
 
 ```python
 # lexicon.serialize(destination="lexicon.ttl", format="ttl")
-lexicon.serialize(destination="lexicon.xml", format="xml")
+# lexicon.serialize(destination="lexicon.", format="ttl")
 ```
 
 ```python
-from rdflib import Graph
-lexicon = Graph()
-lexicon.parse("lexicon.xml")
+# from rdflib import Graph
+# lexicon = Graph()
+# lexicon.parse("lexicon.xml")
 ```
 
 ```python
