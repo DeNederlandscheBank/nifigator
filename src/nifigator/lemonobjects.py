@@ -289,6 +289,8 @@ class ComponentList(LemonBase):
                 comp_uri = next_comp
             else:
                 yield (comp_uri, RDF.rest, RDF.nil)
+            for triple in comp.triples():
+                yield triple
 
 
 class Form(LemonBase, LemonElement):
@@ -394,14 +396,14 @@ class Form(LemonBase, LemonElement):
                 yield (
                     URIRef(self.uri + "#" + self._formVariant),
                     ONTOLEX.writtenRep,
-                    Literal(line),
+                    Literal(line, datatype=XSD.string),
                 )
         if self.representations is not None:
             for line in self.representations:
                 yield (
                     URIRef(self.uri + "#" + self._formVariant),
                     ONTOLEX.representation,
-                    Literal(line),
+                    Literal(line, datatype=XSD.string),
                 )
 
     def load(self, graph: Graph = None, uri: URIRef = None):
@@ -472,27 +474,34 @@ class HasLanguage(LemonBase):
         return self
 
 
-class HasPattern(LemonBase, LemonElement):
-    def __init__(self, uri: URIRef = None, MorphPattern: URIRef = None):
+class HasPatterns(LemonBase, LemonElement):
+    def __init__(self, uri: URIRef = None, MorphPatterns: list = None):
         self.set_uri(uri=uri)
-        self.set_MorphPattern(MorphPattern)
+        self.set_MorphPatterns(MorphPatterns)
 
-    def set_MorphPattern(self, MorphPattern: URIRef = None):
-        self._MorphPattern = MorphPattern
+    def set_MorphPatterns(self, MorphPatterns: list = None):
+        self._MorphPatterns = MorphPatterns
+
+    def add_MorphPattern(self, MorphPattern: URIRef = None):
+        if self._MorphPatterns is None:
+            self._MorphPatterns = [MorphPattern]
+        else:
+            self._MorphPatterns.append(MorphPattern)
 
     @property
-    def MorphPattern(self):
+    def MorphPatterns(self):
         # a rdf:Property, owl:ObjectProperty ;
         # rdfs:label "Muster"@de, "Patron"@fr, "Patroon"@nl, "Patrón"@es, "Pattern"@en ;
-        return self._MorphPattern
+        return self._MorphPatterns
 
     def triples(self):
-        if self._MorphPattern is not None:
-            yield (self.uri, ONTOLEX.MorphPattern, self._MorphPattern)
+        if self.MorphPatterns is not None:
+            for line in self.MorphPatterns:
+                yield (self.uri, ONTOLEX.MorphPattern, line)
 
     def load(self, graph: Graph = None, uri: URIRef = None):
         for _, _, o in graph.triples((uri, ONTOLEX.MorphPattern, None)):
-            self.set_MorphPattern(o)
+            self.add_MorphPattern(o)
         return self
 
 
@@ -517,7 +526,7 @@ class HasPattern(LemonBase, LemonElement):
 #         LemonElement.__init__(self)
 
 
-class LexicalEntry(HasLanguage, HasPattern, LemonBase, LemonElement):
+class LexicalEntry(HasLanguage, HasPatterns, LemonBase, LemonElement):
     """
     An entry in the lexicon. This may be any morpheme, word, compound,
     phrase or clause that is included in the lexicon.
@@ -564,7 +573,7 @@ class LexicalEntry(HasLanguage, HasPattern, LemonBase, LemonElement):
         self,
         uri: URIRef = None,
         language: str = None,
-        pattern: URIRef = None,
+        patterns: URIRef = None,
         abstractForms: List[Form] = None,
         canonicalForm: Form = None,
         lexicalForms: List[Form] = None,
@@ -582,7 +591,7 @@ class LexicalEntry(HasLanguage, HasPattern, LemonBase, LemonElement):
     ):
         self.set_uri(uri=uri)
         self.set_language(language=language)
-        self.set_MorphPattern(MorphPattern=pattern)
+        self.set_MorphPatterns(patterns)
         self.set_abstractForms(abstractForms)
         self.set_canonicalForm(canonicalForm)
         self.set_lexicalForms(lexicalForms)
@@ -603,8 +612,9 @@ class LexicalEntry(HasLanguage, HasPattern, LemonBase, LemonElement):
         s = f"(ontolex:LexicalEntry) uri = {self.uri.n3()}\n"
         if self.language is not None:
             s += indent + f"  language : {self.language}\n"
-        if self.MorphPattern is not None:
-            s += indent + f"  MorphPattern : {self.MorphPattern}\n"
+        if self.MorphPatterns is not None:
+            for line in self.MorphPatterns:
+                s += indent + f"  MorphPattern : {line.n3()}\n"
         if self.abstractForms is not None:
             for line in self.abstractForms:
                 s += indent + f"  abstractForm : {line.uri.n3()}\n"
@@ -808,7 +818,7 @@ class LexicalEntry(HasLanguage, HasPattern, LemonBase, LemonElement):
         yield (self.uri, RDF.type, ONTOLEX.LexicalEntry)
         for triple in HasLanguage.triples(self):
             yield triple
-        for triple in HasPattern.triples(self):
+        for triple in HasPatterns.triples(self):
             yield triple
         if self.abstractForms is not None:
             for line in self.abstractForms:
@@ -865,7 +875,7 @@ class LexicalEntry(HasLanguage, HasPattern, LemonBase, LemonElement):
     def load(self, graph: Graph = None, uri: URIRef = None):
         self.set_uri(uri)
         HasLanguage.load(self, graph, uri)
-        HasPattern.load(self, graph, uri)
+        HasPatterns.load(self, graph, uri)
         forms = [
             Form().load(graph, o)
             for _, _, o in graph.triples((uri, ONTOLEX.abstractForm, None))
@@ -1363,7 +1373,7 @@ class LexicalSense(LemonBase, LemonElement):
 #         LemonElement.__init__(self)
 
 
-class Lexicon(HasLanguage, HasPattern, LemonBase, LemonElement):
+class Lexicon(HasLanguage, HasPatterns, LemonBase, LemonElement):
     """
     The lexicon object. This object is specific to the given language and/or domain it describes.
 
@@ -1392,11 +1402,11 @@ class Lexicon(HasLanguage, HasPattern, LemonBase, LemonElement):
         uri: URIRef = None,
         entries: list = None,
         language: str = None,
-        pattern: URIRef = None,
+        patterns: list = None,
     ):
         self.set_uri(uri=uri)
         self.set_language(language=language)
-        self.set_MorphPattern(MorphPattern=pattern)
+        # self.set_MorphPatterns(MorphPatterns=patterns)
         self.set_entries(entries)
 
     def string_rep(self, level: int = 0):
@@ -1404,8 +1414,8 @@ class Lexicon(HasLanguage, HasPattern, LemonBase, LemonElement):
         s = f"(ontolex:Lexicon) uri = {self.uri.n3()}\n"
         if self.language is not None:
             s += indent + f"  language : {self.language}\n"
-        if self.MorphPattern is not None:
-            s += indent + f"  MorphPattern : {self.MorphPattern}\n"
+        # if self.MorphPattern is not None:
+        #     s += indent + f"  MorphPattern : {self.MorphPattern}\n"
         for entry in self.entries[0:10]:
             s += indent + f"  entry : {entry.uri.n3()}\n"
         if len(self.entries) >= 10:
@@ -1442,8 +1452,8 @@ class Lexicon(HasLanguage, HasPattern, LemonBase, LemonElement):
         yield (self.uri, RDF.type, ONTOLEX.Lexicon)
         for triple in HasLanguage.triples(self):
             yield triple
-        for triple in HasPattern.triples(self):
-            yield triple
+        # for triple in HasPattern.triples(self):
+        #     yield triple
         if self.entries is not None:
             for entry in self.entries:
                 yield (self.uri, ONTOLEX.entry, entry.uri)

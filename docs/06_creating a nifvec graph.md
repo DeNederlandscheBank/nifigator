@@ -14,52 +14,131 @@ jupyter:
 
 # Creating NifVector graphs
 
-
-In a NifVector graph vector embeddings are defined from words and phrases, and the original contexts in which they occur (all in Nif). No dimensionality reduction is applied and this enables to obtain some understanding about why certain word are found to be close to each other.
-
 ```python
 import os, sys, logging
 logging.basicConfig(stream=sys.stdout, 
                     format='%(asctime)s %(message)s',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 ```
 
-## Creating NifVector graphs
+```python
+from rdflib import URIRef
+
+# set language
+lang = 'nl'
+
+# Graph identifier
+identifier = URIRef("https://mangosaurus.eu/dbpedia")
+
+# Database location
+database_url = 'http://localhost:3030/dbpedia_'+lang
+```
+
+First connect to a graph database.
 
 ```python
-from nltk.corpus import stopwords
-stop_words = list(stopwords.words('english'))+[word[0].upper()+word[1:] for word in stopwords.words('english')]
+from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 
-from nifigator import NifVectorGraph, NifGraph, tokenizer
+# Connect to triplestore
+store = SPARQLUpdateStore(
+    query_endpoint = database_url+'/sparql',
+    update_endpoint = database_url+'/update'
+)
+```
 
-lang = 'en'
+```python
+stop_words_en = [
+    
+#     'i', 'me', 'my', 'myself',
+#     'we', 'our', 'ours', 'ourselves',
+#     'you', 'your', 'yours', 'yourself', 'yourselves',
+#     'he', 'him', 'his', 'himself',
+#     'she', 'her', 'hers', 'herself',
+#     'it', 'its', 'itself',
+#     'they', 'them', 'their', 'theirs', 'themselves',
+    
+#     'what', 'which', 'who', 'whom',
+#     'this', 'that', 'these', 'those',
+    
+    'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of',
+    'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during',
+    'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off',
+    'over', 'under', 'further',
+    'per'
+]
 
+stop_words_nl = [
+    'een', 'de', 'het', 'en', 'maar', 'als', 'of', 'omdat', 'van',
+    'te', 'in', 'op', 'aan', 'met', 'voor', 'er', 'om', 'dan', 'of',
+    'door', 'over', 'bij', 'ook', 'tot', 'uit', 'naar', 'want', 'nog',
+    'toch', 'al', 'dus', 'onder', 'tegen', 'na', 'reeds'
+]
+
+# set the parameters to create the NifVector graph
 params = {
-    "min_phrase_count": 2, 
-    "min_context_count": 2,
-    "min_phrasecontext_count": 2,
-    "max_phrase_length": 3,
-    "max_left_length": 2,
-    "max_right_length": 2,
-    "min_left_length": 1,
-    "min_right_length": 1,
-#     "words_filter": {"name": "NLTK_stopwords", 
-#                      "data": stop_words}
+    "min_phrase_count": 5,
+    "min_context_count": 5,
+    "min_phrasecontext_count": 1,
+    "max_phrase_length": 5,
+    "max_context_length": 5,
+    "words_filter": {
+        "data": stop_words_en if lang=="en" else stop_words_nl,
+        "name": "nifvec.stopwords"
+    },
+    "regex_filter": "^[0-9]*[a-zA-Z,;:]*$"
 }
-for j in range(1, 26):
+```
+
+
+## Add some DBpedia data to graph
+
+
+
+```python
+from nifigator import NifGraph, NifVectorGraph, NifSentence
+
+file_size = 50
+
+for i in range(0, 1):
     
-    # the nifvector graph can be created from a NifGraph and a set of optional parameters
-    file = os.path.join("E:\\data\\dbpedia\\extracts", lang, "dbpedia_"+"{:04d}".format(j)+"_lang="+lang+".ttl")
-    
-    nif_graph = NifGraph(file=file)
-    collection = nif_graph.collection
-    documents = [context.isString for context in collection.contexts]
-    vec_graph = NifVectorGraph(
-        documents=documents,
-        params=params
+    # read dbpedia files and tokenize
+    nif_graph = NifGraph(
+        identifier=identifier,
     )
-    logging.info(".. Serializing graph")
-    vec_graph.serialize(destination=os.path.join("E:\\data\\dbpedia\\nifvec\\", "nifvec_test2_"+"{:04d}".format(j)+"_lang="+lang+".xml"), format="xml")
+    context_uris = list()
+    for j in range(i*file_size+1, (i+1)*file_size+1):
+        file = os.path.join("E:\\data\\dbpedia\\extracts\\", lang, "dbpedia_"+"{:04d}".format(j)+"_lang="+lang+".ttl")
+        temp = NifGraph(
+            identifier=identifier,
+            file=file,
+        )
+        for context in temp.contexts:
+            if context.isString is not None:
+                context.extract_sentences(forced_sentence_split_characters=["*"])
+                for r in context.triples([NifSentence]):
+                    temp.add(r)
+            context_uris.append(context.uri)
+        nif_graph += temp
+
+    # create nifvec and store in graph database
+    nifvec_graph = NifVectorGraph(
+        store=store,
+        identifier=identifier,
+        params=params,
+        context_uris=context_uris,
+        nif_graph=nif_graph
+    )
+    
+    nifvec_graph += nif_graph
+```
+
+
+```python
+nifvec_graph.compact()
+```
+
+```python
+!curl -XPOST http://localhost:3030/$/compact/dbpedia_nl
 ```
 
 ```python

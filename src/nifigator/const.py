@@ -36,6 +36,61 @@ ONTOLEX = Namespace("http://www.w3.org/ns/lemon/ontolex#")
 LEXINFO = Namespace("http://www.lexinfo.net/ontology/3.0/lexinfo#")
 DECOMP = Namespace("http://www.w3.org/ns/lemon/decomp#")
 
+DEFAULT_URI = "https://mangosaurus.eu/rdf-data/"
+DEFAULT_PREFIX = "mangosaurus"
+
+MIN_PHRASE_COUNT = "min_phrase_count"
+MIN_CONTEXT_COUNT = "min_context_count"
+MIN_PHRASECONTEXT_COUNT = "min_phrasecontext_count"
+MAX_PHRASE_LENGTH = "max_phrase_length"
+MAX_CONTEXT_LENGTH = "max_context_length"
+CONTEXT_SEPARATOR = "context_separator"
+PHRASE_SEPARATOR = "phrase_separator"
+WORDS_FILTER = "words_filter"
+TRIPLE_BATCH_SIZE = "triple_batch_size"
+FORCED_SENTENCE_SPLIT_CHARACTERS = "force_sentence_split_characters"
+REGEX_FILTER = "regex_filter"
+
+STOPWORDS = [
+    "a",
+    "an",
+    "the",
+    "and",
+    "but",
+    "if",
+    "or",
+    "because",
+    "as",
+    "until",
+    "while",
+    "of",
+    "at",
+    "by",
+    "for",
+    "with",
+    "about",
+    "against",
+    "between",
+    "into",
+    "through",
+    "during",
+    "before",
+    "after",
+    "above",
+    "below",
+    "to",
+    "from",
+    "up",
+    "down",
+    "in",
+    "out",
+    "on",
+    "off",
+    "over",
+    "under",
+    "further",
+    "per",
+]
 
 # Tense
 # VerbForm

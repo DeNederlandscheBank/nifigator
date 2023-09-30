@@ -5,18 +5,18 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.14.5
+      jupytext_version: 1.14.6
   kernelspec:
     display_name: Python 3 (ipykernel)
     language: python
     name: python3
 ---
 
-# Adding annotations
+## Adding annotations
 
 You can add annotations to the Nif data in the following way.
 
-## Entity occurrences
+### Entity occurrences
 
 First we create a collection with one context.
 
@@ -31,7 +31,6 @@ context = NifContext(
   URIScheme=OffsetBasedString,
   isString="The cat sat on the mat. Felix was his name."
 )
-
 # Create a collection and add the context above
 collection = NifContextCollection(uri="https://mangosaurus.eu/rdf-data")
 collection.add_context(context)

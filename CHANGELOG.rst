@@ -58,6 +58,12 @@ Version 0.1.20 (2023-6-7)
 * Parsed code with Black
 
 Version 0.1.21 (2023-6-28)
-=========================
+==========================
 
 * Word filter added to NifVectorGraph
+
+Version 0.2.0 (2023-9-23)
+==========================
+
+* Reworked algorithm to create NifVectorGraph
+* Added functionality to create Lemon lexicon

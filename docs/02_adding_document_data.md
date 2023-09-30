@@ -12,11 +12,11 @@ jupyter:
     name: python3
 ---
 
-# PDF documents pipeline
+# Creating Nif data from PDF documents
 
 Nifigator contains a PDFDocument object to extract text and page offsets from a PDF document. It uses the Python package PDFMiner.six for this.
 
-## Creating a NifContext from extracted text
+## From extracted text to a Nif context
 
 ```python
 from nifigator import PDFDocument
@@ -68,7 +68,7 @@ translation, the Dutch version prevails. ... '
 
 **_NOTE:_** By default, a number of control characters are deleted from the text. You can set these control characters in the PDFDocument constructor with the ignore_control_characters parameter (a string), default = "[\x00-\x08\x0b-\x0c\x0e-\x1f].
 
-## Page offsets
+## Adding page offsets to the Nif context
 
 In some situations it is necessary to know the specific page number that contains a certain part of the text.
 
@@ -122,7 +122,7 @@ which gives
 ```
 
 
-## Using the tokenizer from the syntok package
+## Adding linguistic data
 
 
 It is possible to use the tokenizer from the syntok package before you process the text through a Stanza NLP processor in the following way.
@@ -193,6 +193,9 @@ context.load_from_dict(stanza_dict)
 If you process text with Stanza then the lemma will be a string Literal in the RDF data. That may not always be convenient because to find lemmas you will need to find string matches. You can also set a lexicon uri in the context. The nif:lemma will then a URIRef of the lexicon uri and the lemma. So if you do in advance: context.set_lexicon(URIRef("https://mangosaurus.eu/rdf-data/lexicon/en/")) then the nif:lemma of the lemma "tree" will be URIRef("https://mangosaurus.eu/rdf-data/lexicon/en/tree").
 
 
+## Adding metadata
+
+
 Metadata can be added to the context by providing a dict with DC and DCTERMS items, for example:
 
 ```python
@@ -237,8 +240,4 @@ from nifigator import NifGraph
 g = NifGraph(collection=collection)
 
 g.serialize("..//data//"+generate_uuid(uri=original_uri)+".ttl", format="turtle")
-```
-
-```python
-
 ```

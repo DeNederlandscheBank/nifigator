@@ -1,11 +1,11 @@
-==============
-Short overview
-==============
+=========================================
+Basic functionality for creating Nif data
+=========================================
 
 Below a short overview of the functionality of nifigator is given.
 
-Creating a context
-~~~~~~~~~~~~~~~~~~
+Nif contexts
+~~~~~~~~~~~~
 
 A :class:`~nifigator.nifobjects.NifContext` contains a string of a document or part of it. Here's how to create a simple :class:`~nifigator.nifobjects.NifContext`.
 
@@ -34,8 +34,8 @@ The output shows the string representation of the :class:`~nifigator.nifobjects.
 .. note::
    Of each Nif object the string representation starts with the object class name between parenthesis and the specific uri of the Nif object. In the lines below the Nif predicates are shown with their value. In this case only one predicate is specified (isString).
 
-Adding linguistic annotations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Linguistic annotations
+~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to add linguistic annotations to the context from the output of a Stanza pipeline.
 
@@ -113,8 +113,8 @@ This gives:
 
 This is the lemma of the word 'sat' (the third word of the first sentence).
 
-Creating a collection
-~~~~~~~~~~~~~~~~~~~~~
+Nif collections
+~~~~~~~~~~~~~~~
 
 You can collect mutliple contexts in a :class:`~nifigator.nifobjects.NifContextCollection`.
 
