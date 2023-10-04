@@ -664,6 +664,8 @@ def document_vector(
     vectors: dict = None,
     merge_dict: bool = False,
     topn: int = 15,
+    includePhraseVectors: bool = True,
+    includeContextVectors: bool = False,
     params: dict = None,
 ):
     """
@@ -672,21 +674,32 @@ def document_vector(
     params = {
         WORDS_FILTER: {"data": {phrase: True for phrase in STOPWORDS}},
         MIN_PHRASE_COUNT: 1,
+        MIN_CONTEXT_COUNT: 1,
+        MIN_PHRASECONTEXT_COUNT: 1,
     }
     phrase_sep = params.get(PHRASE_SEPARATOR, default_phrase_separator)
     documents = {key: preprocess(value, params) for key, value in documents.items()}
     phrases = generate_document_phrases(documents=documents, params=params)
-    c = dict()
-    for phrase in phrases.keys():
-        p = phrase.replace(phrase_sep, " ")
-        if p not in vectors.keys():
-            logging.debug("Phrase " + repr(p) + " not found in vectors.")
-        c[p] = Counter(vectors.get(p, Counter()).most_common(topn))
-    #         c[context] = d.get(context, Counter())
-
+    if includeContextVectors:
+        contexts, phrases = generate_document_contexts(init_phrases=phrases, documents=documents, params=params)
+    res = dict()
+    if includePhraseVectors:
+        for phrase in phrases.keys():
+            p = phrase.replace(phrase_sep, " ")
+            if p not in vectors.keys():
+                logging.debug("Phrase " + repr(p) + " not found in vectors.")
+            else:
+                res[p] = Counter({key:value for key, value in vectors.get(p, Counter()).most_common(topn)})
+    if includeContextVectors:
+        for ((left, right)) in contexts.keys():        
+            c = (left.replace(phrase_sep, " "), right.replace(phrase_sep, " "))
+            if c not in vectors.keys():
+                logging.debug("Context " + repr(c) + " not found in vectors.")
+            else:
+                res[c] = Counter({key:value for key, value in vectors.get(c, Counter()).most_common(topn)})
     if merge_dict:
-        c = merge_multiset(c)
-    return c
+        res = merge_multiset(res)
+    return res
 
 
 def generate_document_contexts(
