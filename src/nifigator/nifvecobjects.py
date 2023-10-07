@@ -37,7 +37,7 @@ from .const import (
 )
 from .utils import tokenizer, tokenize_text, to_iri
 from .nifgraph import NifGraph
-from .set_math import merge_multiset
+from .multisets import merge_multiset
 
 default_min_phrase_count = 2
 default_min_phrasecontext_count = 2
@@ -53,17 +53,17 @@ class NifVectorGraph(NifGraph):
     """
     A NIF Vector graph
 
-    :param nif_graph: the graph from which to construct the NIF Vector graph (optional)
+    :param nif_graph (NifGraph): the graph from which to construct the NIF Vector graph (optional)
 
-    :param context_uris: the context uris of the contexts used with the nif_graph to construct the NIF Vector graph (optional)
+    :param context_uris (list): the context uris of the contexts used with the nif_graph to construct the NIF Vector graph (optional)
 
-    :param documents: the documents from which to construct the NIF Vector graph (optional)
+    :param documents (list): the documents from which to construct the NIF Vector graph (optional)
 
-    :param base_uri: the namespace of the nifvec data
+    :param base_uri (Namespace): the namespace of the nifvec data
 
-    :param lang: the language of the nifvec data
+    :param lang (str): the language of the nifvec data
 
-    :param params: dictionary with parameters for constructing the NIF Vector graph
+    :param params (dict): parameters for constructing the NIF Vector graph
 
     """
 
@@ -501,28 +501,39 @@ class NifVectorGraph(NifGraph):
             d["data"].append([phrase_contexts.get(c, 0) for c in contexts.keys()])
         return d
 
-    def context_phrases(self, context: tuple = None, topn: int = 15):
+    def context_phrases(self,
+        context: tuple = None,
+        left: str = None,
+        right: str = None,
+        topn: int = 15
+        ):
         """
         Function that returns the phrases of a context
 
         """
         context_sep = self.params.get(CONTEXT_SEPARATOR, default_context_separator)
         phrase_sep = self.params.get(PHRASE_SEPARATOR, default_phrase_separator)
-        context = (
-            phrase_sep.join(context[0].split(" ")),
-            phrase_sep.join(context[1].split(" ")),
-        )
-        context_uri = URIRef(self.base_uri + context_sep.join(context)).n3()
+        if context is not None:
+            context = (
+                phrase_sep.join(context[0].split(" ")),
+                phrase_sep.join(context[1].split(" ")),
+            )
+            context_uri = URIRef(self.base_uri + context_sep.join(context)).n3()
         q = """
     SELECT distinct ?v (sum(?s) as ?num)
     WHERE
     {\n"""
         q += (
             """
-        {
-            """
-            + context_uri
-            + """ nifvec:isContextOf ?window .
+        {""")
+        if context is not None:
+            q += context_uri + ' nifvec:isContextOf ?window .'
+        if left is not None:
+            q += '?context nifvec:hasLeftValue "'+Literal(left)+'" . '
+        if right is not None:
+            q += '?context nifvec:hasRightValue "'+Literal(right)+'" . '
+        q += ("""
+            ?context nifvec:isContextOf ?window .
             ?window rdf:type nifvec:Window .
             ?window nifvec:hasCount ?s .
             ?phrase nifvec:isPhraseOf ?window .
@@ -662,10 +673,10 @@ class NifVectorGraph(NifGraph):
 def document_vector(
     documents: dict = None,
     vectors: dict = None,
-    merge_dict: bool = False,
-    topn: int = 15,
     includePhraseVectors: bool = True,
     includeContextVectors: bool = False,
+    topn: int = 15,
+    merge_dict: bool = False,
     params: dict = None,
 ):
     """
@@ -679,9 +690,16 @@ def document_vector(
     }
     phrase_sep = params.get(PHRASE_SEPARATOR, default_phrase_separator)
     documents = {key: preprocess(value, params) for key, value in documents.items()}
-    phrases = generate_document_phrases(documents=documents, params=params)
+    phrases = generate_document_phrases(
+        documents=documents, 
+        params=params
+    )
     if includeContextVectors:
-        contexts, phrases = generate_document_contexts(init_phrases=phrases, documents=documents, params=params)
+        contexts, phrases = generate_document_contexts(
+            documents=documents, 
+            init_phrases=phrases, 
+            params=params
+        )
     res = dict()
     if includePhraseVectors:
         for phrase in phrases.keys():

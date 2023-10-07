@@ -21,17 +21,14 @@ The set of all contexts in which a phrase occurs can be seen as a vector represe
 
 The vector representation of a sentence is simply the union of the vectors of the phrases (and possibly contexts) in the sentence, similar to adding vector embeddings of the words in a sentence to calculate the sentence vector embeddings.
 
-
-## Load and set up two DBpedia pages
-
-First we connect to the database
-
 ```python
 import os, sys, logging
 logging.basicConfig(stream=sys.stdout, 
                     format='%(asctime)s %(message)s',
                     level=logging.INFO)
 ```
+
+### Connect to database and load vector representations
 
 ```python
 from rdflib import URIRef
@@ -57,177 +54,29 @@ g = NifVectorGraph(
 ```
 
 ```python
-from collections import defaultdict
-import pickle
-```
-
-```python
-# from collections import Counter
-
-# # phrases
-# q = """
-# SELECT distinct ?v ?l ?r (sum(?count) as ?num)
-# WHERE
-# {
-#     ?p rdf:type nif:Phrase .
-#     ?p nifvec:isPhraseOf ?w .
-#     ?w rdf:type nifvec:Window .
-#     ?w nifvec:hasContext ?c .
-#     ?w nifvec:hasCount ?count .
-#     ?p rdf:value ?v .
-#     ?c nifvec:hasLeftValue ?l .
-#     ?c nifvec:hasRightValue ?r .
-# }
-# GROUP BY ?v ?l ?r
-# ORDER BY DESC (?num)
-# """
-# results_phrases = list(g.query(q))
-
-# d_phrases = defaultdict(Counter)
-# for r in results_phrases:
-#     d_phrases[r[0].value][(r[1].value, r[2].value)] = r[3].value
-
-# with open('..//data//phrase_contexts_vectors.pickle', 'wb') as handle:
-#     pickle.dump(d_phrases, handle, protocol=pickle.HIGHEST_PROTOCOL)
-```
-
-```python
-# from collections import Counter
-
-# # contexts
-# q = """
-# SELECT distinct ?l ?r ?v (sum(?count) as ?num)
-# WHERE
-# {
-#     ?c nifvec:hasLeftValue ?l .
-#     ?c nifvec:hasRightValue ?r .
-#     ?w nifvec:hasContext ?c .
-#     ?w nifvec:hasPhrase ?p .
-#     ?w rdf:type nifvec:Window .
-#     ?w nifvec:hasCount ?count .
-#     ?p rdf:value ?v .
-# }
-# GROUP BY ?l ?r ?v 
-# ORDER BY DESC (?num)
-# """
-# results_context_phrases = list(g.query(q))
-
-# d_context_phrases = defaultdict(Counter)
-# for r in results_context_phrases:
-#     d_context_phrases[(r[0].value, r[1].value)][r[2].value] = r[3].value
-    
-# with open('..//data//context_phrases_vectors.pickle', 'wb') as handle:
-#     pickle.dump(d_context_phrases, handle, protocol=pickle.HIGHEST_PROTOCOL)
-```
-
-```python
-# # lemmas
-# q = """
-# SELECT distinct ?v ?l ?r (sum(?count) as ?num)
-# WHERE
-# {
-#     {
-#         ?p rdf:value ?v .
-#         {
-#             ?e ontolex:canonicalForm [ ontolex:writtenRep ?v ] .
-#         }
-#         UNION
-#         {
-#             ?e ontolex:otherForm [ ontolex:writtenRep ?v ] .
-#         }
-#         ?e ontolex:otherForm|ontolex:canonicalForm [ ontolex:writtenRep ?f ] .
-#         ?lemma rdf:value ?f .
-#         ?lemma nifvec:isPhraseOf ?w .
-#         ?w rdf:type nifvec:Window .
-#         ?w nifvec:hasContext ?c .
-#         ?w nifvec:hasCount ?count .
-#         ?c nifvec:hasLeftValue ?l .
-#         ?c nifvec:hasRightValue ?r .
-#     }
-# }
-# GROUP BY ?v ?l ?r
-# ORDER BY DESC (?num)
-# """
-# results_lemmas = list(g.query(q))
-
-# d_lemmas = defaultdict(Counter)
-# for r in results_lemmas:
-#     d_lemmas[r[0].value][(r[1].value, r[2].value)] = r[3].value 
-
-# with open('..//data//lemma_contexts_vectors.pickle', 'wb') as handle:
-#     pickle.dump(d_lemmas, handle, protocol=pickle.HIGHEST_PROTOCOL) 
-```
-
-```python
-# # contexts lemmas
-# q = """
-# SELECT distinct ?l ?r ?v (sum(?count) as ?num)
-# WHERE
-# {
-#     {
-#         ?c nifvec:hasLeftValue ?l .
-#         ?c nifvec:hasRightValue ?r .
-#         ?w rdf:type nifvec:Window .
-#         ?w nifvec:hasContext ?c .
-#         ?w nifvec:hasCount ?count .
-#         ?w nifvec:hasPhrase ?p .
-#         ?p rdf:value ?f .
-#         {
-#             ?e ontolex:canonicalForm [ ontolex:writtenRep ?f ] .
-#         }
-#         UNION
-#         {
-#             ?e ontolex:otherForm [ ontolex:writtenRep ?f ] .
-#         }
-#         ?e ontolex:otherForm|ontolex:canonicalForm [ ontolex:writtenRep ?v ] .
-#         ?lemma rdf:value ?v .
-#     }
-# }
-# GROUP BY ?l ?r ?v 
-# ORDER BY DESC (?num)
-# """
-# results_context_lemmas = list(g.query(q))
-
-# d_context_lemmas = defaultdict(Counter)
-# for r in results_context_lemmas:
-#     d_context_lemmas[(r[0].value, r[1].value)][r[2].value] = r[3].value 
-    
-# with open('..//data//context_lemmas_vectors.pickle', 'wb') as handle:
-#     pickle.dump(d_context_lemmas, handle, protocol=pickle.HIGHEST_PROTOCOL)   
-```
-
-```python
-
-```
-
-```python
 import pickle
 
 with open('..//data//phrase_vectors.pickle', 'rb') as handle:
-    d_phrases = pickle.load(handle)
+    v_phrases = pickle.load(handle)
 with open('..//data//lemma_vectors.pickle', 'rb') as handle:
-    d_lemmas = pickle.load(handle)
+    v_lemmas = pickle.load(handle)
 with open('..//data//context_phrases_vectors.pickle', 'rb') as handle:
-    d_context_phrases = pickle.load(handle)
-# with open('..//data//context_lemma_vectors.pickle', 'rb') as handle:
-#     d_lemmas = pickle.load(handle)
+    v_contexts = pickle.load(handle)
 ```
 
 ```python
+# the vector of 'is' is a subset of the vector of 'be'
+print(v_phrases['is'] <= v_lemmas['be'])
 
+# the vector 'discovered' is a subset of the vector of 'discover'
+print(v_phrases['discovered'] <= v_lemmas['discover'])
+
+# the union of the vectors of 'king' and 'kings' is equal to the vector of 'king'
+print(v_phrases['kings'] + v_phrases['king'] == v_lemmas['king'])
 ```
 
-```python
-d_phrases['is'] <= d_lemmas['is']
-```
+### Load and set up two DBpedia pages
 
-```python
-d_phrases['discovered'] <= d_lemmas['discover']
-```
-
-```python
-d_phrases['kings'] + d_phrases['king'] == d_lemmas['kings']
-```
 
 We take two pages from DBpedia about two stars, Aldebaran and Antares. 
 
@@ -293,14 +142,14 @@ Create a vector of every sentences of both documents.
 
 
 ```python
-from nifigator.set_math import merge_multiset
+from nifigator.multisets import merge_multiset
 from nifigator import document_vector
 
-# setup dictionary with sentences and their contexts
+# setup dictionary with sentences and their vector representation
 doc1_vector = {
     sent.anchorOf: document_vector(
         {sent.uri: sent.anchorOf}, 
-        d_phrases,
+        v_phrases,
         merge_dict=True
     )
     for sent in doc1.sentences
@@ -308,7 +157,7 @@ doc1_vector = {
 doc2_vector = {
     sent.anchorOf: document_vector(
         {sent.uri: sent.anchorOf}, 
-        d_phrases,
+        v_phrases,
         merge_dict=True,
     )
     for sent in doc2.sentences
@@ -319,7 +168,7 @@ Calculate the distances (based on Jaccard index) of all sentence combinations of
 
 
 ```python
-from nifigator.set_math import jaccard_index, merge_multiset
+from nifigator.multisets import jaccard_index, merge_multiset
 
 # Calculate the Jaccard distance for all sentence combinations
 d = {
@@ -336,31 +185,32 @@ Print the results
 
 ```python
 # print the results
-for item in similarities[0:35]:
+for item in similarities[0:5]:
     print(repr(item[0][0]) + " \n<- distance = "+str(item[1])+' = {0:.4f}'.format(float(item[1]))+" ->\n"+repr(item[0][1])+"\n")
 ```
 
 
 ```console
+'References' 
+<- distance = 0 = 0.0000 ->
+'References'
+
 'External links' 
 <- distance = 0 = 0.0000 ->
 'External links'
 
 'It is a variable star listed in the General Catalogue of Variable Stars, but it is listed using its Bayer designation and does not have a separate variable star designation.' 
-<- distance = 103/432 = 0.2384 ->
+<- distance = 25/96 = 0.2604 ->
 'Antares is a variable star and is listed in the General Catalogue of Variable Stars but as a Bayer-designated star it does not have a separate variable star designation.'
 
 'In 2016, the International Astronomical Union Working Group on Star Names (WGSN) approved the proper name Aldebaran for this star.' 
-<- distance = 131/380 = 0.3447 ->
+<- distance = 129/349 = 0.3696 ->
 'In 2016, the International Astronomical Union organised a Working Group on Star Names (WGSN) to catalog and standardise proper names for stars.'
 
-'Aldebaran is 5.47 degrees south of the ecliptic and so can be occulted by the Moon.' 
-<- distance = 34/59 = 0.5763 ->
-'Occultations and conjunctions\nAntares is 4.57 degrees south of the ecliptic, one of four first magnitude stars within 6° of the ecliptic (the others are Spica, Regulus and Aldebaran), so it can be occulted by the Moon.'
-
 'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.' 
-<- distance = 7/12 = 0.5833 ->
+<- distance = 116/201 = 0.5771 ->
 "Nomenclature\nα Scorpii (Latinised to Alpha Scorpii) is the star's Bayer designation."
+
 ```
 
 
@@ -379,131 +229,80 @@ The sentence with the highest support has the most contexts in common and thus i
 
 ```python
 # setup dictionary with sentences and their contexts
-doc_phrases = {
-    sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, d_phrases, topn=15)
+v_doc_phrases = {
+    sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, v_phrases, topn=15)
     for sent in doc1.sentences+doc2.sentences
 }
-doc_lemmas = {
-    sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, d_lemmas, topn=15)
+v_doc_lemmas = {
+    sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, v_lemmas, topn=15)
     for sent in doc1.sentences+doc2.sentences
 }
 ```
-
-```python
-from nifigator import containment_index
-from collections import Counter
-
-def search(query: str=None):
-    """
-    """
-    # generate contexts of the text
-    query_phrases = document_vector({'query': query}, d_phrases, topn=15)
-    query_lemmas = document_vector({'query': query}, d_lemmas, topn=15)
-    d = dict()
-    for sent, sent_lemmas in doc_lemmas.items():
-        sent_phrases = doc_phrases[sent]
-        # find the full phrase matches of the text and the sentence
-        full_matches = [
-            (p1, p2)
-            for p1, c1 in query_lemmas.items()
-            for p2, c2 in sent_phrases.items()
-            if 1 - containment_index(c2, c1) == 0
-        ]
-        # find the close phrase matches of the text and the sentence
-        close_matches = {
-            p1: [(p2, 1 - containment_index(c2, c1))
-            for p2, c2 in sent_phrases.items()
-            if 1 - containment_index(c2, c1) < 1 and 
-               p1 not in [p[0] for p in full_matches] and 
-               p2 not in [p[1] for p in full_matches]]
-            for p1, c1 in query_lemmas.items()
-        }
-        close_matches = {key: sorted(value, key=lambda item: item[1]) for key, value in close_matches.items() if value!=[]}
-        close_matches = dict(sorted(close_matches.items(), key=lambda item: item[1]))
-        # calculate the containment index
-        c1 = merge_multiset(query_phrases)
-        c2 = merge_multiset(sent_lemmas)
-        containment = containment_index(c1, c2)
-        d[sent] = (1 - containment, (full_matches, close_matches))
-    d = dict(sorted(d.items(), key=lambda item: item[1][0]))
-    return d
-```
-
 
 Create a vector of every sentence in all documents.
 
 
 
 ```python
-query = "The brightest star in the constellation of Taurus"
-d = search(query=query)
-for i in list(d.items())[0:3]:
-    print(repr(i[0]))
-    print("distance = " +str(i[1][0]) + " = "+str(float(i[1][0])))
-    print("exact similarities:")
-    for j in i[1][1][0]:
-        print("  " +str(j)+' = 0')
-    print("other similarities:")
-    for j in i[1][1][1:]:
-        for key, value in j.items():
-            print("  "+repr(key)+" -> ", end='')
-            print(", ".join([repr(row[0])+' ({0:.4f})'.format(float(row[1])) for row in value[0:3]]))
-    print("")
+# d = vector_search(
+#     query="The brightest star in the constellation of Taurus",
+#     v_phrases=v_phrases,
+#     v_lemmas=v_lemmas,
+#     v_doc_phrases=v_doc_phrases,
+#     v_doc_lemmas=v_doc_lemmas,
+#     topn=15,
+# )
+# show_search_results(d)
 ```
 
 ```console
 'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.'
-distance = 0 = 0.0
+distance = 16/81 = 0.19753086419753085
 exact similarities:
-  ('brightest', 'brightest') = 0
-  ('brightest star', 'brightest star') = 0
   ('brightest star in the constellation', 'brightest star in the constellation') = 0
   ('star in the constellation', 'star in the constellation') = 0
-  ('constellation', 'constellation') = 0
   ('Taurus', 'Taurus') = 0
 other similarities:
-  'star' -> 'star' (0.0667), 'Aldebaran' (0.6667), 'designation' (0.8667)
+  'brightest' -> 'brightest' (0.2667)
+  'brightest star' -> 'brightest star' (0.2667), 'star' (0.9333), 'constellation' (0.9333)
+  'constellation' -> 'constellation' (0.2000), 'star' (0.8667), 'designation' (0.8667)
+  'star' -> 'star' (0.4000), 'Aldebaran' (0.8333), 'constellation' (0.8667)
 
 "It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous."
-distance = 13/81 = 0.16049382716049382
+distance = 25/81 = 0.30864197530864196
 exact similarities:
-  ('brightest', 'brightest') = 0
-  ('brightest star', 'brightest star') = 0
   ('star in the constellation', 'star in the night sky') = 0
   ('Taurus', 'Taurus') = 0
 other similarities:
+  'brightest' -> 'brightest' (0.2667), 'luminous' (0.9333)
+  'brightest star' -> 'brightest star' (0.2667), 'planet' (0.8667), 'star' (0.9333)
   'brightest star in the constellation' -> 'mass of Jupiter' (0.7143), 'night' (0.8000), 'planet' (0.8000)
-  'constellation' -> 'sky' (0.6667), 'sun' (0.6667), 'mass of Jupiter' (0.7143)
-  'star' -> 'star' (0.0667), 'planet' (0.6000), 'Aldebaran' (0.6667)
+  'constellation' -> 'sky' (0.7333), 'sun' (0.7333), 'planet' (0.8000)
+  'star' -> 'star' (0.4000), 'mass of Jupiter' (0.7143), 'planet' (0.7333)
 
 'As the brightest star in a Zodiac constellation, it is also given great significance within astrology.'
-distance = 7/27 = 0.25925925925925924
+distance = 37/81 = 0.4567901234567901
 exact similarities:
-  ('brightest', 'brightest') = 0
-  ('brightest star', 'brightest star') = 0
-  ('constellation', 'constellation') = 0
 other similarities:
-  'brightest star in the constellation' -> 'Zodiac' (0.5000), 'star' (0.8667), 'significance' (0.9333)
+  'star' -> 'Zodiac' (0.3333), 'star' (0.4000), 'constellation' (0.8667)
+  'brightest star in the constellation' -> 'Zodiac' (0.5000), 'star' (0.8667), 'constellation' (0.8667)
   'Taurus' -> 'astrology' (0.8667)
-  'star' -> 'star' (0.0667), 'Zodiac' (0.3333), 'significance' (0.8667)
+  'brightest' -> 'brightest' (0.2667), 'great' (0.9333)
+  'brightest star' -> 'brightest star' (0.2667), 'Zodiac' (0.8333), 'star' (0.9333)
+  'constellation' -> 'constellation' (0.2000), 'Zodiac' (0.6667), 'star' (0.8667)
 ```
 
 ```python
-# reformulation with cluster instead of constellation and Sun instead of brightest star
-query = "the sun in the Taurus cluster"
-d = search(query=query)
-for i in list(d.items())[0:3]:
-    print(repr(i[0]))
-    print("distance = " +str(i[1][0]) + " = "+str(float(i[1][0])))
-    print("exact similarities:")
-    for j in i[1][1][0]:
-        print("  " +str(j)+' = 0')
-    print("other similarities:")
-    for j in i[1][1][1:]:
-        for key, value in j.items():
-            print("  "+repr(key)+": ", end='')
-            print(", ".join([repr(row[0])+' ({0:.4f})'.format(float(row[1])) for row in value[0:3]]))
-    print("")
+# # reformulation with cluster instead of constellation and Sun instead of brightest star
+# d = vector_search(
+#     query="the sun in the Taurus cluster",
+#     v_phrases=v_phrases,
+#     v_lemmas=v_lemmas,
+#     v_doc_phrases=v_doc_phrases,
+#     v_doc_lemmas=v_doc_lemmas,
+#     topn=15,
+# )
+# show_search_results(d)
 ```
 ```console
 "It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous."
@@ -512,56 +311,51 @@ exact similarities:
   ('sun', 'sun') = 0
   ('Taurus', 'Taurus') = 0
 other similarities:
-  'cluster': 'star' (0.8000), 'brightness' (0.8000), 'planet' (0.8000)
+  'cluster' -> 'star' (0.8000), 'planet' (0.8000), 'radius' (0.8000)
 
 'Aldebaran , designated α Tauri (Latinized to Alpha Tauri, abbreviated Alpha Tau, α Tau), is an orange giant star measured to be about 65 light-years from the Sun in the zodiac constellation Taurus.'
-distance = 13/43 = 0.3023255813953488
+distance = 14/43 = 0.32558139534883723
 exact similarities:
   ('Taurus', 'Taurus') = 0
 other similarities:
-  'sun': 'Sun' (0.1333), 'zodiac' (0.7333), 'constellation' (0.7333)
-  'cluster': 'star' (0.8000), 'constellation' (0.8000), 'light' (0.8667)
+  'sun' -> 'Sun' (0.2667), 'zodiac' (0.7333), 'constellation' (0.7333)
+  'cluster' -> 'star' (0.8000), 'constellation' (0.8000), 'Sun' (0.8667)
 
-"The star is, by chance, in the line of sight between the Earth and the Hyades, so it has the appearance of being the brightest member of the open cluster, but the cluster that forms the bull's-head-shaped asterism is more than twice as far away, at about 150 light years."
-distance = 18/43 = 0.4186046511627907
+'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.'
+distance = 20/43 = 0.46511627906976744
 exact similarities:
-  ('sun', 'Hyades') = 0
+  ('Taurus', 'Taurus') = 0
 other similarities:
-  'cluster': 'cluster' (0.0667), 'line' (0.7333), 'star' (0.8000)
-  'Taurus': 'sight' (0.8667), '150' (0.9333), 'light' (0.9333)
+  'cluster' -> 'brightest star in the constellation' (0.6667), 'Bayer designation' (0.7500), 'star' (0.8000)
+  'sun' -> 'brightest star in the constellation' (0.6667), 'constellation' (0.7333), 'brightest star' (0.9333)
 ```
 
 ```python
-query = "What did astronomer William Herschel discover to Aldebaran?"
-d = search(query=query)
-for i in list(d.items())[0:6]:
-    print(repr(i[0]))
-    print("distance = " +str(i[1][0]) + " = "+str(float(i[1][0])))
-    print("exact similarities:")
-    for j in i[1][1][0]:
-        print("  " +str(j)+' = 0')
-    print("other similarities:")
-    for j in i[1][1][1:]:
-        for key, value in j.items():
-            print("  "+repr(key)+" -> ", end='')
-            print(", ".join([repr(row[0])+' ({0:.4f})'.format(float(row[1])) for row in value[0:3]]))
-    print("")
+# d = vector_search(
+#     query="What did astronomer William Herschel discover to Aldebaran?",
+#     v_phrases=v_phrases,
+#     v_lemmas=v_lemmas,
+#     v_doc_phrases=v_doc_phrases,
+#     v_doc_lemmas=v_doc_lemmas,
+#     topn=15,
+# )
+# show_search_results(d)
 ```
 
 ```console
 'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.'
-distance = 14/33 = 0.42424242424242425
+distance = 43/99 = 0.43434343434343436
 exact similarities:
   ('astronomer', 'astronomer') = 0
   ('William', 'William') = 0
   ('William Herschel', 'William Herschel') = 0
   ('Herschel', 'Herschel') = 0
-  ('discover', 'discovered') = 0
   ('Aldebaran', 'Aldebaran') = 0
 other similarities:
+  'discover' -> 'discovered' (0.1333)
 
 'It was then observed by Scottish astronomer James William Grant FRSE while in India on 23 July 1844.'
-distance = 50/99 = 0.5050505050505051
+distance = 53/99 = 0.5353535353535354
 exact similarities:
   ('astronomer', 'astronomer') = 0
   ('William', 'William') = 0
@@ -570,229 +364,188 @@ other similarities:
   'Aldebaran' -> 'It' (0.9333), 'India' (0.9333), '1844' (0.9333)
   'Herschel' -> 'It was' (0.9333)
   'What did' -> 'It was then' (0.9091), 'It was' (0.9333)
-  'discover' -> 'observed' (0.6000), 'was' (0.9333), 'was then' (0.9333)
-  'did' -> 'was' (0.9333), 'India' (0.9333)
+  'discover' -> 'observed' (0.7333)
+  'did' -> 'was' (0.9333)
 
 'English astronomer Edmund Halley studied the timing of this event, and in 1718 concluded that Aldebaran must have changed position since that time, moving several minutes of arc further to the north.'
-distance = 20/33 = 0.6060606060606061
+distance = 7/11 = 0.6363636363636364
 exact similarities:
   ('astronomer', 'astronomer') = 0
   ('Aldebaran', 'Aldebaran') = 0
 other similarities:
   'What' -> '1718' (0.8571), 'this event' (0.8667), 'moving' (0.9333)
   'What did' -> 'concluded that' (0.9333), 'that' (0.9333)
-  'did' -> 'have changed' (0.9231), 'this event' (0.9333), 'have' (0.9333)
-  'William' -> 'several' (0.8667), 'timing' (0.9333)
-  'discover' -> 'since that time' (0.6667), 'studied' (0.8000), 'concluded' (0.8000)
-
-"Follow on measurements of proper motion showed that Herschel's companion was diverging from Aldebaran, and hence they were not physically connected."
-distance = 61/99 = 0.6161616161616161
-exact similarities:
-  ('Herschel', 'Herschel') = 0
-  ('Aldebaran', 'Aldebaran') = 0
-other similarities:
-  'What did' -> 'hence' (0.8667), 'showed that' (0.9333), 'that' (0.9333)
-  'What' -> 'hence' (0.9333)
-  'William' -> 'measurements' (0.8667), 'motion' (0.8667), 'hence' (0.9333)
-  'discover' -> 'showed that' (0.8000), 'showed' (0.8667), 'that' (0.9333)
-  'did' -> 'were' (0.7333), 'they were' (0.8000), 'was' (0.9333)
-
-'It was included with an 11th magnitude companion as a double star as H IV 66 in the Herschel Catalogue of Double Stars and Σ II 2 in the Struve Double Star Catalog, and together with a 14th magnitude star as β 550 in the Burnham Double Star Catalogue.'
-distance = 64/99 = 0.6464646464646465
-exact similarities:
-  ('Herschel', 'Herschel') = 0
-other similarities:
-  'William' -> 'Catalog' (0.9231), 'magnitude' (0.9333), 'Catalogue' (0.9333)
-  'What' -> 'It' (0.9333)
-  'Aldebaran' -> 'It' (0.9333), 'magnitude' (0.9333), 'star' (0.9333)
-  'What did' -> 'It was' (0.9333)
-  'discover' -> 'included' (0.8000), 'was' (0.9333), 'double' (0.9333)
-  'did' -> 'was' (0.9333), 'double' (0.9333)
-
-'It is a variable star listed in the General Catalogue of Variable Stars, but it is listed using its Bayer designation and does not have a separate variable star designation.'
-distance = 65/99 = 0.6565656565656566
-exact similarities:
-other similarities:
-  'William' -> 'Catalogue' (0.9333)
-  'What' -> 'It' (0.9333), 'it' (0.9333), 'using' (0.9333)
-  'Herschel' -> 'It is' (0.9333), 'it' (0.9333)
-  'What did' -> 'It is' (0.9333), 'it is' (0.9333), 'does' (0.9333)
-  'did' -> 'does' (0.2667), 'it is' (0.7333), 'is' (0.9333)
-  'Aldebaran' -> 'it' (0.8667), 'It' (0.9333), 'star' (0.9333)
-  'discover' -> 'listed' (0.8667), 'using' (0.8667), 'is' (0.9333)
+  'discover' -> 'studied' (0.8667), 'concluded' (0.8667), 'have changed' (0.9231)
+  'William' -> 'timing' (0.9333), 'several' (0.9333)
 ```
 
 
 ### Applying the minHash algorithm with LSH (Locality Sensitive Hashing)
 
 ```python
-num_perm = 2**7
+# from nifigator import MinHashSearch
+
+# mhs = MinHashSearch(
+#     vectors=v_lemmas,
+#     documents=v_doc_lemmas
+# )
 ```
 
 ```python
-from datasketch import MinHashLSHEnsemble, MinHash
+# import pickle 
 
-def create_minhash_dict(
-    d: dict=None,
-    minhash_dict: dict={},
-    topn: int=15
-):
-    for key, value in d.items():
-        minhash_dict[key] = MinHash(
-            num_perm=num_perm
-        )
-        for context in value.most_common(topn):
-            v = str(context[0]).encode('utf8')
-            minhash_dict[key].update(v)
-    return minhash_dict
-
-minhash_phrases = create_minhash_dict(d_phrases, {})
-minhash_lemmas = create_minhash_dict(d_lemmas, {})
+# with open('..\\data\\minhash.pickle', 'wb') as fh:
+#     pickle.dump(mhs.minhash_dict, fh)
 ```
 
 ```python
-s1 = 'king'
-s2 = 'queen'
-print("estimated Jaccard index: "+str(1 - minhash_phrases[s2].jaccard(minhash_phrases[s1])))
-print("real Jaccard index: "+str(1 - float(jaccard_index(
-    set(p[0] for p in d_phrases[s1].most_common(15)),
-    set(p[0] for p in d_phrases[s2].most_common(15)),
+with open('..\\data\\minhash.pickle', 'rb') as fh:
+    minhash_dict = pickle.load(fh)
+```
+
+```python
+from nifigator import MinHashSearch
+
+mhs = MinHashSearch(
+    base_vectors=v_lemmas,
+    minhash_dict=minhash_dict,
+    documents=v_doc_lemmas,
+)
+```
+
+```python
+from nifigator import jaccard_index
+
+s1 = 'large'
+s2 = 'small'
+print("estimated Jaccard index: "+str(mhs.minhash_dict[s2].jaccard(mhs.minhash_dict[s1])))
+print("actual Jaccard index: "+str(float(jaccard_index(
+    set(p[0] for p in v_phrases[s1].most_common(15)),
+    set(p[0] for p in v_phrases[s2].most_common(15)),
 ))))
 ```
 
 ```console
-estimated Jaccard index: 0.71875
-real Jaccard index: 0.6956521739130435
+estimated Jaccard index: 0.375
+actual Jaccard index: 0.36363636363636365
 ```
 
 ```python
 s1 = 'was'
 s2 = 'be'
-print("estimated Jaccard index: "+str(1 - minhash_phrases[s2].jaccard(minhash_phrases[s1])))
-print("real Jaccard index: "+str(1 - float(jaccard_index(
-    set(p[0] for p in d_phrases[s1].most_common(15)),
-    set(p[0] for p in d_phrases[s2].most_common(15)),
+print("estimated Jaccard index: "+str(mhs.minhash_dict[s2].jaccard(mhs.minhash_dict[s1])))
+print("actual Jaccard index: "+str(float(jaccard_index(
+    set(p[0] for p in v_lemmas[s1].most_common(15)),
+    set(p[0] for p in v_lemmas[s2].most_common(15)),
 ))))
 ```
 
 ```console
 estimated Jaccard index: 1.0
-real Jaccard index: 1.0
-```
-
-```python
-def create_document_minhash_dict(
-    documents: dict=None, 
-    phrases_minhash: dict=None,
-):
-    minhash_dict = dict()
-    for key, value in documents.items():
-        minhash_dict[key] = MinHash(
-            num_perm=num_perm
-        )
-        for phrase in value.keys():
-            minhash_dict[key].merge(phrases_minhash[phrase])
-    return minhash_dict
-
-minhash_docs = create_document_minhash_dict(
-    doc_phrases, 
-    minhash_phrases
-)
+actual Jaccard index: 1.0
 ```
 
 ```python
 s1 = 'Antares is a variable star and is listed in the General Catalogue of Variable Stars but as a Bayer-designated star it does not have a separate variable star designation.'
 s2 = 'It is a variable star listed in the General Catalogue of Variable Stars, but it is listed using its Bayer designation and does not have a separate variable star designation.'
-print("estimated Jaccard index: "+str(1 - minhash_docs[s2].jaccard(minhash_docs[s1])))
-print("real Jaccard index: "+str(1 - float(jaccard_index(
-    merge_multiset(doc_phrases[s1]).keys(),
-    merge_multiset(doc_phrases[s2]).keys()
-))))
 
+print("estimated Jaccard index: "+str(mhs.minhash_documents[s2].jaccard(mhs.minhash_documents[s1])))
+print("actual Jaccard index: "+str(float(jaccard_index(
+    merge_multiset(v_doc_phrases[s1]).keys(),
+    merge_multiset(v_doc_phrases[s2]).keys()
+))))
 ```
 
 ```console
 estimated Jaccard index: 0.2890625
-real Jaccard index: 0.26041666666666663
-```
-
-```python
-num_part = 2**4
-
-# Create an LSH Ensemble index with threshold and number of partition
-lshensemble = MinHashLSHEnsemble(
-    threshold=0.5, 
-    num_perm=num_perm,
-    num_part=num_part
-)
-lshensemble.index(
-    [
-        (key, minhash_docs[key], len(value.keys()))
-        for key, value in doc_phrases.items()
-    ]
-)
-```
-
-```python
-def minhash_search(query: str=None):
-    """
-    """
-    # generate contexts of the text
-    query_phrases = document_vector({'query': query}, d_lemmas)
-    # minhash_lemmas = create_minhash_dict(query_phrases, minhash_phrases)
-    minhash_query = MinHash(
-        num_perm=num_perm
-    )
-    for phrase in query_phrases.keys():
-        minhash_query.merge(minhash_lemmas[phrase])
-    d = dict()
-    for sent in lshensemble.query(minhash_query, len(query_phrases.keys())):
-        c1 = merge_multiset(query_phrases).keys()
-        c2 = merge_multiset(doc_phrases[sent]).keys()
-        containment = containment_index(c1, c2)
-        d[sent] = 1 - containment
-    d = dict(sorted(d.items(), key=lambda item: item[1]))
-    return d
+actual Jaccard index: 0.26041666666666663
 ```
 
 ```python
 query = "The brightest star in the constellation of Taurus"
-d = search(query=query)
-for item, distance in list(d.items())[0:3]:
-    print(repr(item) +': {0:.4f}'.format(float(distance[0])))
+scores = mhs.get_scores(query)
+for item, distance in list(scores.items())[0:3]:
+    print(repr(item) +': {0:.4f}'.format(float(distance)))
+    print(len(scores))
 ```
 
 ```console
-'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.': 0.1975
-"It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous.": 0.3086
-'As the brightest star in a Zodiac constellation, it is also given great significance within astrology.': 0.4568
+'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.': 0.0000
+38
+"It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous.": 0.1728
+38
+'As the brightest star in a Zodiac constellation, it is also given great significance within astrology.': 0.2593
 ```
 
 ```python
 query = "the sun in the Taurus cluster"
-d = search(query=query)
-for item, distance in list(d.items())[0:3]:
-    print(repr(item) +': {0:.4f}'.format(float(distance[0])))
+scores = mhs.get_scores(query)
+for item, distance in list(scores.items())[0:3]:
+    print(repr(item) +': {0:.4f}'.format(float(distance)))
 ```
 
 ```console
-"It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous.": 0.2558
-'Aldebaran , designated α Tauri (Latinized to Alpha Tauri, abbreviated Alpha Tau, α Tau), is an orange giant star measured to be about 65 light-years from the Sun in the zodiac constellation Taurus.': 0.3256
-'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.': 0.4651
+"It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous.": 0.2381
+'Aldebaran , designated α Tauri (Latinized to Alpha Tauri, abbreviated Alpha Tau, α Tau), is an orange giant star measured to be about 65 light-years from the Sun in the zodiac constellation Taurus.': 0.3095
+'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.': 0.4286
 ```
 
 ```python
-query = "What did astronomer William Herschel discover in relation to Aldebaran?"
-d = search(query=query)
-for item, distance in list(d.items())[0:3]:
-    print(repr(item) +': {0:.4f}'.format(float(distance[0])))
+query = "astronomer reveal to Aldebaran?"
+scores = mhs.get_scores(query)
+for item, distance in list(scores.items())[0:3]:
+    print(repr(item) +': {0:.4f}'.format(float(distance)))
 ```
 
 ```console
-'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.': 0.4912
-'It was then observed by Scottish astronomer James William Grant FRSE while in India on 23 July 1844.': 0.5789
-'English astronomer Edmund Halley studied the timing of this event, and in 1718 concluded that Aldebaran must have changed position since that time, moving several minutes of arc further to the north.': 0.6754
+'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.': 0.4228
+"Follow on measurements of proper motion showed that Herschel's companion was diverging from Aldebaran, and hence they were not physically connected.": 0.7236
+'English astronomer Edmund Halley studied the timing of this event, and in 1718 concluded that Aldebaran must have changed position since that time, moving several minutes of arc further to the north.': 0.7236
 
+```
+
+```python
+from nifigator import MinHashSearchResult
+
+i = mhs.matches(
+   "astronomer William Herschel reveal to Aldebaran",
+   'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.'
+)
+print("Score: "+str(i.score))
+print("Full matches:")
+for key, values in i.full_matches.items():
+    for value in values:
+        print((key, value[0], "{0:.4f}".format(float(value[1]))))
+print("Close matches:")
+for key, values in i.close_matches.items():
+    for value in values:
+        print((key, value[0], "{0:.4f}".format(float(value[1]))))
+
+```
+
+```python
+i
+```
+
+```python
+# contexts = g.contexts
+```
+
+```python
+# from nifigator import document_vector
+
+# v_doc_phrases = dict()
+# v_doc_lemmas = dict()
+# for context in contexts[0:2]:
+#     # setup dictionary with sentences and their contexts
+#     v_doc_phrases.update({
+#         sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, v_phrases, topn=15)
+#         for sent in context.sentences
+#     })
+#     v_doc_lemmas.update({
+#         sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, v_lemmas, topn=15)
+#         for sent in context.sentences
+#     })
 ```
 
 ```python
