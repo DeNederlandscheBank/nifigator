@@ -28,6 +28,10 @@ logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO)
 ```
 
+
+## Setup database and load DBpedia data
+
+
 ### Connect to database and load vector representations
 
 ```python
@@ -52,6 +56,10 @@ g = NifVectorGraph(
     identifier=identifier
 )
 ```
+
+
+Import the vector representations of the phrases, lemmas and contexts
+
 
 ```python
 import pickle
@@ -121,13 +129,8 @@ print(doc2)
 ```
 
 
-## Extract vectors from graph database
-
-
-Then we need a function to extract from an arbitrary string the phrases and create a dictionary with the phrase in the sentence and their contexts.
-
-
 ## Find similar sentences
+
 
 For sentences similarities we sum the contexts of the all the phrases in the sentences, thereby obtaining a multiset representation of the sentence. Then we calculate the Jaccard distance between the sentences and sort with increasing distance.
 
@@ -214,18 +217,16 @@ for item in similarities[0:5]:
 ```
 
 
-### Explainable text search
+## Explainable text search
 
 
-Now some text search examples.
-
-For text search we need another distance function. Now we are interested in the extent to which a sentence contains the contexts of a text. For this we use the containment or support, defined by the cardinality of the intersection between A and B divided by the cardinality of A. 
+For text search we need another distance function. Now we are interested in the extent to which the vector of a sentence contains the vector representation of a query. For this we use the containment or support, defined by the cardinality of the intersection between A and B divided by the cardinality of A.
 
 ```{math}
 containment(A, B) = \frac { | A \bigcap B |} { |A| }
 ```
 
-The sentence with the highest support has the most contexts in common and thus is the closest to the text.
+The sentence with the highest containment has the most contexts in common and thus is the closest to the text.
 
 ```python
 # setup dictionary with sentences and their contexts
@@ -239,148 +240,9 @@ v_doc_lemmas = {
 }
 ```
 
-Create a vector of every sentence in all documents.
 
+### Using the MinHashSearch 
 
-
-```python
-# d = vector_search(
-#     query="The brightest star in the constellation of Taurus",
-#     v_phrases=v_phrases,
-#     v_lemmas=v_lemmas,
-#     v_doc_phrases=v_doc_phrases,
-#     v_doc_lemmas=v_doc_lemmas,
-#     topn=15,
-# )
-# show_search_results(d)
-```
-
-```console
-'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.'
-distance = 16/81 = 0.19753086419753085
-exact similarities:
-  ('brightest star in the constellation', 'brightest star in the constellation') = 0
-  ('star in the constellation', 'star in the constellation') = 0
-  ('Taurus', 'Taurus') = 0
-other similarities:
-  'brightest' -> 'brightest' (0.2667)
-  'brightest star' -> 'brightest star' (0.2667), 'star' (0.9333), 'constellation' (0.9333)
-  'constellation' -> 'constellation' (0.2000), 'star' (0.8667), 'designation' (0.8667)
-  'star' -> 'star' (0.4000), 'Aldebaran' (0.8333), 'constellation' (0.8667)
-
-"It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous."
-distance = 25/81 = 0.30864197530864196
-exact similarities:
-  ('star in the constellation', 'star in the night sky') = 0
-  ('Taurus', 'Taurus') = 0
-other similarities:
-  'brightest' -> 'brightest' (0.2667), 'luminous' (0.9333)
-  'brightest star' -> 'brightest star' (0.2667), 'planet' (0.8667), 'star' (0.9333)
-  'brightest star in the constellation' -> 'mass of Jupiter' (0.7143), 'night' (0.8000), 'planet' (0.8000)
-  'constellation' -> 'sky' (0.7333), 'sun' (0.7333), 'planet' (0.8000)
-  'star' -> 'star' (0.4000), 'mass of Jupiter' (0.7143), 'planet' (0.7333)
-
-'As the brightest star in a Zodiac constellation, it is also given great significance within astrology.'
-distance = 37/81 = 0.4567901234567901
-exact similarities:
-other similarities:
-  'star' -> 'Zodiac' (0.3333), 'star' (0.4000), 'constellation' (0.8667)
-  'brightest star in the constellation' -> 'Zodiac' (0.5000), 'star' (0.8667), 'constellation' (0.8667)
-  'Taurus' -> 'astrology' (0.8667)
-  'brightest' -> 'brightest' (0.2667), 'great' (0.9333)
-  'brightest star' -> 'brightest star' (0.2667), 'Zodiac' (0.8333), 'star' (0.9333)
-  'constellation' -> 'constellation' (0.2000), 'Zodiac' (0.6667), 'star' (0.8667)
-```
-
-```python
-# # reformulation with cluster instead of constellation and Sun instead of brightest star
-# d = vector_search(
-#     query="the sun in the Taurus cluster",
-#     v_phrases=v_phrases,
-#     v_lemmas=v_lemmas,
-#     v_doc_phrases=v_doc_phrases,
-#     v_doc_lemmas=v_doc_lemmas,
-#     topn=15,
-# )
-# show_search_results(d)
-```
-```console
-"It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous."
-distance = 11/43 = 0.2558139534883721
-exact similarities:
-  ('sun', 'sun') = 0
-  ('Taurus', 'Taurus') = 0
-other similarities:
-  'cluster' -> 'star' (0.8000), 'planet' (0.8000), 'radius' (0.8000)
-
-'Aldebaran , designated α Tauri (Latinized to Alpha Tauri, abbreviated Alpha Tau, α Tau), is an orange giant star measured to be about 65 light-years from the Sun in the zodiac constellation Taurus.'
-distance = 14/43 = 0.32558139534883723
-exact similarities:
-  ('Taurus', 'Taurus') = 0
-other similarities:
-  'sun' -> 'Sun' (0.2667), 'zodiac' (0.7333), 'constellation' (0.7333)
-  'cluster' -> 'star' (0.8000), 'constellation' (0.8000), 'Sun' (0.8667)
-
-'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.'
-distance = 20/43 = 0.46511627906976744
-exact similarities:
-  ('Taurus', 'Taurus') = 0
-other similarities:
-  'cluster' -> 'brightest star in the constellation' (0.6667), 'Bayer designation' (0.7500), 'star' (0.8000)
-  'sun' -> 'brightest star in the constellation' (0.6667), 'constellation' (0.7333), 'brightest star' (0.9333)
-```
-
-```python
-# d = vector_search(
-#     query="What did astronomer William Herschel discover to Aldebaran?",
-#     v_phrases=v_phrases,
-#     v_lemmas=v_lemmas,
-#     v_doc_phrases=v_doc_phrases,
-#     v_doc_lemmas=v_doc_lemmas,
-#     topn=15,
-# )
-# show_search_results(d)
-```
-
-```console
-'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.'
-distance = 43/99 = 0.43434343434343436
-exact similarities:
-  ('astronomer', 'astronomer') = 0
-  ('William', 'William') = 0
-  ('William Herschel', 'William Herschel') = 0
-  ('Herschel', 'Herschel') = 0
-  ('Aldebaran', 'Aldebaran') = 0
-other similarities:
-  'discover' -> 'discovered' (0.1333)
-
-'It was then observed by Scottish astronomer James William Grant FRSE while in India on 23 July 1844.'
-distance = 53/99 = 0.5353535353535354
-exact similarities:
-  ('astronomer', 'astronomer') = 0
-  ('William', 'William') = 0
-other similarities:
-  'What' -> 'It' (0.9333)
-  'Aldebaran' -> 'It' (0.9333), 'India' (0.9333), '1844' (0.9333)
-  'Herschel' -> 'It was' (0.9333)
-  'What did' -> 'It was then' (0.9091), 'It was' (0.9333)
-  'discover' -> 'observed' (0.7333)
-  'did' -> 'was' (0.9333)
-
-'English astronomer Edmund Halley studied the timing of this event, and in 1718 concluded that Aldebaran must have changed position since that time, moving several minutes of arc further to the north.'
-distance = 7/11 = 0.6363636363636364
-exact similarities:
-  ('astronomer', 'astronomer') = 0
-  ('Aldebaran', 'Aldebaran') = 0
-other similarities:
-  'What' -> '1718' (0.8571), 'this event' (0.8667), 'moving' (0.9333)
-  'What did' -> 'concluded that' (0.9333), 'that' (0.9333)
-  'discover' -> 'studied' (0.8667), 'concluded' (0.8667), 'have changed' (0.9231)
-  'William' -> 'timing' (0.9333), 'several' (0.9333)
-```
-
-
-### Applying the minHash algorithm with LSH (Locality Sensitive Hashing)
 
 ```python
 # from nifigator import MinHashSearch
@@ -457,8 +319,8 @@ print("actual Jaccard index: "+str(float(jaccard_index(
 ```
 
 ```console
-estimated Jaccard index: 0.2890625
-actual Jaccard index: 0.26041666666666663
+estimated Jaccard index: 0.6953125
+actual Jaccard index: 0.7395833333333334
 ```
 
 ```python
@@ -466,14 +328,11 @@ query = "The brightest star in the constellation of Taurus"
 scores = mhs.get_scores(query)
 for item, distance in list(scores.items())[0:3]:
     print(repr(item) +': {0:.4f}'.format(float(distance)))
-    print(len(scores))
 ```
 
 ```console
 'Aldebaran is the brightest star in the constellation Taurus and so has the Bayer designation α Tauri, Latinised as Alpha Tauri.': 0.0000
-38
 "It is the brightest star in Taurus and generally the fourteenth-brightest star in the night sky, though it varies slowly in brightness between magnitude 0.75 and 0.95. Aldebaran is believed to host a planet several times the mass of Jupiter, named Aldebaran b. Aldebaran is a red giant, cooler than the sun with a surface temperature of 3,900 K, but its radius is about 44 times the sun's, so it is over 400 times as luminous.": 0.1728
-38
 'As the brightest star in a Zodiac constellation, it is also given great significance within astrology.': 0.2593
 ```
 
@@ -491,22 +350,19 @@ for item, distance in list(scores.items())[0:3]:
 ```
 
 ```python
-query = "astronomer reveal to Aldebaran?"
+query = "astronomer William Herschel reveal to Aldebaran"
 scores = mhs.get_scores(query)
 for item, distance in list(scores.items())[0:3]:
     print(repr(item) +': {0:.4f}'.format(float(distance)))
 ```
 
 ```console
-'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.': 0.4228
-"Follow on measurements of proper motion showed that Herschel's companion was diverging from Aldebaran, and hence they were not physically connected.": 0.7236
-'English astronomer Edmund Halley studied the timing of this event, and in 1718 concluded that Aldebaran must have changed position since that time, moving several minutes of arc further to the north.': 0.7236
-
+'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.': 0.1594
+'It was then observed by Scottish astronomer James William Grant FRSE while in India on 23 July 1844.': 0.4348
+'English astronomer Edmund Halley studied the timing of this event, and in 1718 concluded that Aldebaran must have changed position since that time, moving several minutes of arc further to the north.': 0.5797
 ```
 
 ```python
-from nifigator import MinHashSearchResult
-
 i = mhs.matches(
    "astronomer William Herschel reveal to Aldebaran",
    'English astronomer William Herschel discovered a faint companion to Aldebaran in 1782; an 11th magnitude star at an angular separation of 117″.'
@@ -515,7 +371,7 @@ print("Score: "+str(i.score))
 print("Full matches:")
 for key, values in i.full_matches.items():
     for value in values:
-        print((key, value[0], "{0:.4f}".format(float(value[1]))))
+        print((key, value[0]))
 print("Close matches:")
 for key, values in i.close_matches.items():
     for value in values:
@@ -523,29 +379,16 @@ for key, values in i.close_matches.items():
 
 ```
 
-```python
-i
-```
-
-```python
-# contexts = g.contexts
-```
-
-```python
-# from nifigator import document_vector
-
-# v_doc_phrases = dict()
-# v_doc_lemmas = dict()
-# for context in contexts[0:2]:
-#     # setup dictionary with sentences and their contexts
-#     v_doc_phrases.update({
-#         sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, v_phrases, topn=15)
-#         for sent in context.sentences
-#     })
-#     v_doc_lemmas.update({
-#         sent.anchorOf: document_vector({sent.uri: sent.anchorOf}, v_lemmas, topn=15)
-#         for sent in context.sentences
-#     })
+```console
+Score: 11/69
+Full matches:
+('astronomer', 'astronomer')
+('William', 'William')
+('William Herschel', 'William Herschel')
+('Herschel', 'Herschel')
+('Aldebaran', 'Aldebaran')
+Close matches:
+('reveal', 'discovered', '0.7333')
 ```
 
 ```python

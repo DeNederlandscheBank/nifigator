@@ -950,7 +950,7 @@ class LexicalSense(LemonBase, LemonElement):
     :param context: Denotes the pragmatic or discursive context of a sense mapping or a constraint on the mapping by syntactic or semantic properites
     :param definition: Indicates a natural language definition. Note there is a pseudo-node to allow for further description of the definition (e.g., source, creation date etc.). The value property should be used to indicate the string value of the definition.
     :param equivalent: Indicates that two senses are equivalent. From a lexical point of view , this indicates that the lexical entries can be substituted for each other with no change in meaning. From an ontological point of view it means that the two references are not disjoint. From a mapping point of view it means if one mapping apply the other must necessarily apply
-    :param example
+    :param example:
     :param incompatible: Says that the two senses are disjoint. From a lexical point of view, this means substituting the lexical entries must change the meaning of the phrase. From an ontological point of view, this property is implied if both references are also disjoint, but does not imply disjointness, but non-equivalence of the references. For the mapping point of view  there is not instance when both mappings are valid.
     :param isA: Denotes that the single argument of a class predicate is represented in the lexicon by the given semantic argument. That is Class(?x) or ?x rdf:type Class
     :param isReferenceOf: Indicate that a reference has a given sense

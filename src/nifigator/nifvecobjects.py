@@ -501,12 +501,9 @@ class NifVectorGraph(NifGraph):
             d["data"].append([phrase_contexts.get(c, 0) for c in contexts.keys()])
         return d
 
-    def context_phrases(self,
-        context: tuple = None,
-        left: str = None,
-        right: str = None,
-        topn: int = 15
-        ):
+    def context_phrases(
+        self, context: tuple = None, left: str = None, right: str = None, topn: int = 15
+    ):
         """
         Function that returns the phrases of a context
 
@@ -523,16 +520,15 @@ class NifVectorGraph(NifGraph):
     SELECT distinct ?v (sum(?s) as ?num)
     WHERE
     {\n"""
-        q += (
-            """
-        {""")
+        q += """
+        {"""
         if context is not None:
-            q += context_uri + ' nifvec:isContextOf ?window .'
+            q += context_uri + " nifvec:isContextOf ?window ."
         if left is not None:
-            q += '?context nifvec:hasLeftValue "'+Literal(left)+'" . '
+            q += '?context nifvec:hasLeftValue "' + Literal(left) + '" . '
         if right is not None:
-            q += '?context nifvec:hasRightValue "'+Literal(right)+'" . '
-        q += ("""
+            q += '?context nifvec:hasRightValue "' + Literal(right) + '" . '
+        q += """
             ?context nifvec:isContextOf ?window .
             ?window rdf:type nifvec:Window .
             ?window nifvec:hasCount ?s .
@@ -543,7 +539,6 @@ class NifVectorGraph(NifGraph):
     GROUP BY ?v
     ORDER BY DESC(?num)
     """
-        )
         if topn is not None:
             q += "LIMIT " + str(topn) + "\n"
         results = Counter({r[0].value: r[1].value for r in self.query(q)})
@@ -690,15 +685,10 @@ def document_vector(
     }
     phrase_sep = params.get(PHRASE_SEPARATOR, default_phrase_separator)
     documents = {key: preprocess(value, params) for key, value in documents.items()}
-    phrases = generate_document_phrases(
-        documents=documents, 
-        params=params
-    )
+    phrases = generate_document_phrases(documents=documents, params=params)
     if includeContextVectors:
         contexts, phrases = generate_document_contexts(
-            documents=documents, 
-            init_phrases=phrases, 
-            params=params
+            documents=documents, init_phrases=phrases, params=params
         )
     res = dict()
     if includePhraseVectors:
@@ -707,14 +697,24 @@ def document_vector(
             if p not in vectors.keys():
                 logging.debug("Phrase " + repr(p) + " not found in vectors.")
             else:
-                res[p] = Counter({key:value for key, value in vectors.get(p, Counter()).most_common(topn)})
+                res[p] = Counter(
+                    {
+                        key: value
+                        for key, value in vectors.get(p, Counter()).most_common(topn)
+                    }
+                )
     if includeContextVectors:
-        for ((left, right)) in contexts.keys():        
+        for left, right in contexts.keys():
             c = (left.replace(phrase_sep, " "), right.replace(phrase_sep, " "))
             if c not in vectors.keys():
                 logging.debug("Context " + repr(c) + " not found in vectors.")
             else:
-                res[c] = Counter({key:value for key, value in vectors.get(c, Counter()).most_common(topn)})
+                res[c] = Counter(
+                    {
+                        key: value
+                        for key, value in vectors.get(c, Counter()).most_common(topn)
+                    }
+                )
     if merge_dict:
         res = merge_multiset(res)
     return res

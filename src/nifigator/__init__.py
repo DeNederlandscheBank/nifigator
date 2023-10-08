@@ -28,4 +28,4 @@ from .utils import *
 from .lemongraph import *
 from .lemonobjects import *
 from .multisets import *
-from. search import *
+from .search import *
