@@ -207,36 +207,33 @@ class NifGraph(Graph):
                         self += Graph().parse(data=f.read())
 
     @property
-    def contexts(self, uri: str = DEFAULT_URI):
+    def contexts(self, uri: str = DEFAULT_URI) -> list:
         """
-        This property constructs and returns a `nif:Context`
-        from the `NifGraph`.
+        This property constructs and returns a nif:Context from the NifGraph.
 
-        :return: list of `nif:Context` in the graph
+        return list of nif:Context in the graph
 
         """
         uris = list(self.subjects(RDF.type, NIF.Context))
         return [NifContext(uri=uri, graph=self) for uri in uris]
 
     @property
-    def collections(self, uri: str = DEFAULT_URI):
+    def collections(self, uri: str = DEFAULT_URI) -> list:
         """
-        This property constructs and returns a list of `nif:ContextCollection`
-        from the `NifGraph`.
+        This property constructs and returns a list of nif:ContextCollection from the NifGraph.
 
-        :return: list of `nif:ContextCollection` in the graph
+        return list of `nif:ContextCollection` in the graph
 
         """
         uris = list(self.subjects(RDF.type, NIF.ContextCollection))
         return [NifContextCollection(uri=uri, graph=self) for uri in uris]
 
     @property
-    def collection(self, uri: str = DEFAULT_URI):
+    def collection(self, uri: str = DEFAULT_URI) -> NifContextCollection:
         """
-        This property constructs and returns the first `nif:ContextCollection`
-        from the `NifGraph`.
+        This property constructs and returns the first nif:ContextCollection from the NifGraph.
 
-        :return: the first `nif:ContextCollection` in the graph
+        return the first nif:ContextCollection in the graph
 
         """
         for uri in list(self.subjects(RDF.type, NIF.ContextCollection)):
